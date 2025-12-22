@@ -1,14 +1,20 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronRight, Mail, Phone, Building2, MapPin, CreditCard, FileText } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronDown, ChevronRight, Mail, Phone, Building2, MapPin, CreditCard, FileText, Search, Download, Eye, Calendar, User, Building, Hash } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import useFetch from '@/hooks/useFetchHook';
 
 interface KYCData {
-  kyc_basic_info_sno: number[];
+  kyc_basic_info_sno: number;
+  div_sno: number | null;
+  ecno: number | null;
+  brn_sno: number | null;
+  dept_sno: number | null;
+  com_sno: number | null;
   company_name: string;
   contact_person: string;
   email: string;
@@ -19,8 +25,14 @@ interface KYCData {
   is_msme_avail: string;
   msme_no: string | null;
   pan_no: string;
-  status: string;
+  created_by: string | null;
   created_date: string;
+  modified_by: string | null;
+  modified_date: string | null;
+  is_active: string;
+  status: string;
+  supp_code: string | null;
+  old_supp_code: string | null;
   kyc_address: string;
   kyc_bank_info: string;
   kyc_contact_details: string;
@@ -30,11 +42,11 @@ interface KYCData {
 interface APIResponse {
   success: boolean;
   data: KYCData[];
-  count: number;
 }
 
-const KYCSupplierView = ({ apiData }: { apiData: APIResponse }) => {
+const KYCDataView = () => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
 
   const toggleRow = (index: number) => {
     const newExpanded = new Set(expandedRows);
@@ -46,6 +58,8 @@ const KYCSupplierView = ({ apiData }: { apiData: APIResponse }) => {
     setExpandedRows(newExpanded);
   };
 
+  const apiData = useFetch<APIResponse>(`${import.meta.env.VITE_API_URL}/api/kyc/get_all_kycs`);
+
   const parseJSONField = (jsonString: string) => {
     try {
       return JSON.parse(jsonString);
@@ -54,196 +68,456 @@ const KYCSupplierView = ({ apiData }: { apiData: APIResponse }) => {
     }
   };
 
-  return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">KYC Supplier Management</h1>
-          <p className="text-muted-foreground">Total Suppliers: {apiData.count}</p>
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (!apiData?.data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
+          <p className="text-slate-600 font-medium">Loading KYC data...</p>
         </div>
       </div>
+    );
+  }
 
-      <div className="space-y-4">
-        {apiData.data.map((supplier, index) => {
-          const isExpanded = expandedRows.has(index);
-          const addresses = parseJSONField(supplier.kyc_address);
-          const bankInfo = parseJSONField(supplier.kyc_bank_info);
-          const contacts = parseJSONField(supplier.kyc_contact_details);
-          const documents = parseJSONField(supplier.kyc_uploaded_doc);
+  if (!apiData.data.success || !apiData.data.data) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="pt-6 text-center">
+            <Building2 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <p className="text-slate-600">No KYC data available</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-          return (
-            <Card key={index} className="overflow-hidden">
-              <Collapsible open={isExpanded} onOpenChange={() => toggleRow(index)}>
-                <div className="flex items-center justify-between p-6 hover:bg-accent/50 cursor-pointer" onClick={() => toggleRow(index)}>
-                  <div className="flex items-center gap-4 flex-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </Button>
-                    
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-3">
-                        <h3 className="font-semibold text-lg">{supplier.company_name}</h3>
-                        <Badge variant={supplier.status === 'Y' ? 'default' : 'secondary'}>
-                          {supplier.status === 'Y' ? 'Active' : 'Inactive'}
-                        </Badge>
-                        {supplier.is_gst_avail === 'Y' && <Badge variant="outline">GST</Badge>}
-                        {supplier.is_msme_avail === 'Y' && <Badge variant="outline">MSME</Badge>}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Building2 className="h-3 w-3" />
-                          {supplier.contact_person}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {supplier.email}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {supplier.mobile_number}
-                        </span>
+  const filteredSuppliers = apiData.data.data.filter(supplier =>
+    supplier.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.contact_person.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    supplier.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (supplier.supp_code && supplier.supp_code.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Header Section */}
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+           
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 sm:w-80">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by company, contact, email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                />
+              </div>
+              {/* <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                <Download className="h-4 w-4" />
+                Export
+              </Button> */}
+            </div>
+          </div>
+        </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="space-y-4">
+          {filteredSuppliers.map((supplier, index) => {
+            const isExpanded = expandedRows.has(index);
+            const addresses = parseJSONField(supplier.kyc_address);
+            const bankInfo = parseJSONField(supplier.kyc_bank_info);
+            const contacts = parseJSONField(supplier.kyc_contact_details);
+            const documents = parseJSONField(supplier.kyc_uploaded_doc);
+
+            return (
+              <Card key={supplier.kyc_basic_info_sno} className="overflow-hidden hover:shadow-lg transition-all duration-300 border-slate-200 bg-white/80 backdrop-blur-sm">
+                <Collapsible open={isExpanded} onOpenChange={() => toggleRow(index)}>
+                  <CollapsibleTrigger asChild>
+                    <div className="flex items-center justify-between p-6 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 cursor-pointer transition-all duration-200">
+                      <div className="flex items-start gap-4 flex-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-9 w-9 rounded-full hover:bg-blue-100 mt-1 flex-shrink-0"
+                        >
+                          {isExpanded ? 
+                            <ChevronDown className="h-4 w-4 text-blue-600" /> : 
+                            <ChevronRight className="h-4 w-4 text-slate-600" />
+                          }
+                        </Button>
+                        
+                        <div className="flex-1 space-y-3 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-bold text-lg lg:text-xl text-slate-900 capitalize">
+                              {supplier.company_name}
+                            </h3>
+                            {supplier.supp_code && (
+                              <Badge variant="outline" className="border-slate-300 text-slate-700">
+                                {supplier.supp_code}
+                              </Badge>
+                            )}
+                            <Badge 
+                              variant={supplier.status === 'Y' ? 'default' : 'secondary'}
+                              className={supplier.status === 'Y' ? 'bg-gradient-to-r from-green-500 to-emerald-500' : ''}
+                            >
+                              {supplier.status === 'Y' ? 'Active' : 'Inactive'}
+                            </Badge>
+                            {supplier.is_gst_avail === 'Y' && (
+                              <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">
+                                GST
+                              </Badge>
+                            )}
+                            {supplier.is_msme_avail === 'Y' && (
+                              <Badge variant="outline" className="border-purple-300 text-purple-700 bg-purple-50">
+                                MSME
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <div className="p-1.5 rounded-md bg-slate-100">
+                                <User className="h-3.5 w-3.5 text-slate-600" />
+                              </div>
+                              <span className="truncate capitalize">{supplier.contact_person}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <div className="p-1.5 rounded-md bg-blue-100">
+                                <Mail className="h-3.5 w-3.5 text-blue-600" />
+                              </div>
+                              <span className="truncate">{supplier.email}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <div className="p-1.5 rounded-md bg-green-100">
+                                <Phone className="h-3.5 w-3.5 text-green-600" />
+                              </div>
+                              <span>{supplier.mobile_number}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-600">
+                              <div className="p-1.5 rounded-md bg-orange-100">
+                                <Calendar className="h-3.5 w-3.5 text-orange-600" />
+                              </div>
+                              <span>{formatDate(supplier.created_date).split(',')[0]}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  </CollapsibleTrigger>
 
-                <CollapsibleContent>
-                  <div className="border-t px-6 pb-6">
-                    <Tabs defaultValue="basic" className="mt-6">
-                      <TabsList className="grid w-full grid-cols-5">
-                        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-                        <TabsTrigger value="address">Address</TabsTrigger>
-                        <TabsTrigger value="bank">Bank Details</TabsTrigger>
-                        <TabsTrigger value="contacts">Contacts</TabsTrigger>
-                        <TabsTrigger value="documents">Documents ({documents.length})</TabsTrigger>
-                      </TabsList>
+                  <CollapsibleContent>
+                    <div className="border-t border-slate-100 bg-gradient-to-br from-slate-50/50 to-blue-50/30">
+                      <Tabs defaultValue="basic" className="p-6">
+                        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 h-auto gap-2 bg-white/80 p-1">
+                          <TabsTrigger value="basic" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white">
+                            Basic Info
+                          </TabsTrigger>
+                          <TabsTrigger value="address" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white">
+                            Address ({addresses.length})
+                          </TabsTrigger>
+                          <TabsTrigger value="bank" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white">
+                            Bank ({bankInfo.length})
+                          </TabsTrigger>
+                          <TabsTrigger value="contacts" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white">
+                            Contacts ({contacts.length})
+                          </TabsTrigger>
+                          <TabsTrigger value="documents" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white col-span-2 lg:col-span-1">
+                            Documents ({documents.length})
+                          </TabsTrigger>
+                        </TabsList>
 
-                      <TabsContent value="basic" className="space-y-4 mt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <InfoItem label="Business Type" value={supplier.business_type} />
-                          <InfoItem label="PAN Number" value={supplier.pan_no} />
-                          <InfoItem label="GST Number" value={supplier.gst_no} />
-                          <InfoItem label="MSME Number" value={supplier.msme_no || 'N/A'} />
-                          <InfoItem label="Created Date" value={new Date(supplier.created_date).toLocaleDateString()} />
-                          <InfoItem label="Supplier SNO" value={supplier.kyc_basic_info_sno.join(', ')} />
-                        </div>
-                      </TabsContent>
+                        {/* Basic Info Tab */}
+                        <TabsContent value="basic" className="mt-6">
+                          <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50">
+                                  <TableHead className="font-semibold w-1/3">Field</TableHead>
+                                  <TableHead className="font-semibold">Value</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                              
+                                <TableRow className="hover:bg-blue-50/50">
+                                  <TableCell className="font-medium">Company Name</TableCell>
+                                  <TableCell className="capitalize">{supplier.company_name}</TableCell>
+                                </TableRow>
+                                <TableRow className="hover:bg-blue-50/50">
+                                  <TableCell className="font-medium">Business Type</TableCell>
+                                  <TableCell className="capitalize">{supplier.business_type}</TableCell>
+                                </TableRow>
+                                <TableRow className="hover:bg-blue-50/50">
+                                  <TableCell className="font-medium">Contact Person</TableCell>
+                                  <TableCell className="capitalize">{supplier.contact_person}</TableCell>
+                                </TableRow>
+                                <TableRow className="hover:bg-blue-50/50">
+                                  <TableCell className="font-medium">Email</TableCell>
+                                  <TableCell>{supplier.email}</TableCell>
+                                </TableRow>
+                                <TableRow className="hover:bg-blue-50/50">
+                                  <TableCell className="font-medium">Mobile Number</TableCell>
+                                  <TableCell>{supplier.mobile_number}</TableCell>
+                                </TableRow>
+                                <TableRow className="hover:bg-blue-50/50">
+                                  <TableCell className="font-medium">PAN Number</TableCell>
+                                  <TableCell>{supplier.pan_no}</TableCell>
+                                </TableRow>
+                              
+                                {supplier.is_gst_avail === 'Y' && (
+                                  <TableRow className="hover:bg-blue-50/50">
+                                    <TableCell className="font-medium">GST Number</TableCell>
+                                    <TableCell>{supplier.gst_no}</TableCell>
+                                  </TableRow>
+                                )}
+                               
+                                {supplier.is_msme_avail === 'Y' && supplier.msme_no && (
+                                  <TableRow className="hover:bg-blue-50/50">
+                                    <TableCell className="font-medium">MSME Number</TableCell>
+                                    <TableCell>{supplier.msme_no}</TableCell>
+                                  </TableRow>
+                                )}
+                                {supplier.supp_code && (
+                                  <TableRow className="hover:bg-blue-50/50">
+                                    <TableCell className="font-medium">Supplier Code</TableCell>
+                                    <TableCell>{supplier.supp_code}</TableCell>
+                                  </TableRow>
+                                )}
+                                {supplier.old_supp_code && (
+                                  <TableRow className="hover:bg-blue-50/50">
+                                    <TableCell className="font-medium">Old Supplier Code</TableCell>
+                                    <TableCell>{supplier.old_supp_code}</TableCell>
+                                  </TableRow>
+                                )}
+                                <TableRow className="hover:bg-blue-50/50">
+                                  <TableCell className="font-medium">Status</TableCell>
+                                  <TableCell>
+                                    <Badge variant={supplier.status === 'Y' ? 'default' : 'secondary'}>
+                                      {supplier.status === 'Y' ? 'Active' : 'Inactive'}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                                                   
+                               
+                                
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </TabsContent>
 
-                      <TabsContent value="address" className="mt-4">
-                        <div className="space-y-4">
-                          {addresses.map((addr: any, idx: number) => (
-                            <Card key={idx}>
-                              <CardHeader>
-                                <CardTitle className="text-base flex items-center gap-2">
-                                  <MapPin className="h-4 w-4" />
-                                  {addr.address_type === 'PR' ? 'Primary' : addr.address_type} Address
-                                  {addr.is_primary === '1' && <Badge variant="secondary">Primary</Badge>}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                                <InfoItem label="Door No" value={addr.door_no} />
-                                <InfoItem label="Street" value={addr.street} />
-                                <InfoItem label="Area" value={addr.area} />
-                                <InfoItem label="City" value={addr.city} />
-                                <InfoItem label="Taluk" value={addr.taluk} />
-                                <InfoItem label="State" value={addr.state} />
-                                <InfoItem label="Pincode" value={addr.pincode} />
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </TabsContent>
+                        {/* Address Tab */}
+                        <TabsContent value="address" className="mt-6">
+                          <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50">
+                                  <TableHead className="font-semibold">Type</TableHead>
+                                  <TableHead className="font-semibold">Door No</TableHead>
+                                  <TableHead className="font-semibold">Street</TableHead>
+                                  <TableHead className="font-semibold">Area</TableHead>
+                                  <TableHead className="font-semibold">City</TableHead>
+                                  <TableHead className="font-semibold">Taluk</TableHead>
+                                  <TableHead className="font-semibold">State</TableHead>
+                                  <TableHead className="font-semibold">Pincode</TableHead>
+                                  <TableHead className="font-semibold">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {addresses.map((addr: any, idx: number) => (
+                                  <TableRow key={idx} className="hover:bg-blue-50/50">
+                                    <TableCell>
+                                      <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">
+                                        {addr.address_type === 'PR' ? 'Primary' : addr.address_type}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>{addr.door_no}</TableCell>
+                                    <TableCell>{addr.street}</TableCell>
+                                    <TableCell>{addr.area}</TableCell>
+                                    <TableCell>{addr.city}</TableCell>
+                                    <TableCell>{addr.taluk}</TableCell>
+                                    <TableCell>{addr.state}</TableCell>
+                                    <TableCell>{addr.pincode}</TableCell>
+                                    <TableCell>
+                                      {addr.location_link && (
+                                        <Button variant="outline" size="sm" asChild>
+                                          <a href={addr.location_link} target="_blank" rel="noopener noreferrer">
+                                            <MapPin className="h-3.5 w-3.5" />
+                                          </a>
+                                        </Button>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </TabsContent>
 
-                      <TabsContent value="bank" className="mt-4">
-                        <div className="space-y-4">
-                          {bankInfo.map((bank: any, idx: number) => (
-                            <Card key={idx}>
-                              <CardHeader>
-                                <CardTitle className="text-base flex items-center gap-2">
-                                  <CreditCard className="h-4 w-4" />
-                                  {bank.bank_name}
-                                  {bank.is_primary === 'Y' && <Badge variant="secondary">Primary</Badge>}
-                                </CardTitle>
-                                <CardDescription>{bank.bank_branch_name}</CardDescription>
-                              </CardHeader>
-                              <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                                <InfoItem label="Account Holder" value={bank.ac_holder_name} />
-                                <InfoItem label="Account Number" value={bank.ac_number} />
-                                <InfoItem label="Account Type" value={bank.ac_type} />
-                                <InfoItem label="IFSC Code" value={bank.ifsc} />
-                                <InfoItem label="Bank Address" value={bank.bank_address} className="col-span-2" />
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </TabsContent>
+                        {/* Bank Details Tab */}
+                        <TabsContent value="bank" className="mt-6">
+                          <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50">
+                                  <TableHead className="font-semibold">Bank Name</TableHead>
+                                  <TableHead className="font-semibold">Branch</TableHead>
+                                  <TableHead className="font-semibold">Account Holder</TableHead>
+                                  <TableHead className="font-semibold">Account Number</TableHead>
+                                  <TableHead className="font-semibold">Account Type</TableHead>
+                                  <TableHead className="font-semibold">IFSC Code</TableHead>
+                                  <TableHead className="font-semibold">Bank Address</TableHead>
+                                  <TableHead className="font-semibold">Primary</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {bankInfo.map((bank: any, idx: number) => (
+                                  <TableRow key={idx} className="hover:bg-blue-50/50">
+                                    <TableCell className="font-medium">{bank.bank_name}</TableCell>
+                                    <TableCell>{bank.bank_branch_name}</TableCell>
+                                    <TableCell>{bank.ac_holder_name}</TableCell>
+                                    <TableCell>{bank.ac_number}</TableCell>
+                                    <TableCell>{bank.ac_type}</TableCell>
+                                    <TableCell>{bank.ifsc}</TableCell>
+                                    <TableCell>{bank.bank_address}</TableCell>
+                                    <TableCell>
+                                      {bank.is_primary === 'Y' && (
+                                        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500">Primary</Badge>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </TabsContent>
 
-                      <TabsContent value="contacts" className="mt-4">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Contact Type</TableHead>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Position</TableHead>
-                              <TableHead>Mobile</TableHead>
-                              <TableHead>Email</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {contacts.map((contact: any, idx: number) => (
-                              <TableRow key={idx}>
-                                <TableCell><Badge variant="outline">{contact.contact_type}</Badge></TableCell>
-                                <TableCell className="font-medium">{contact.contact_name}</TableCell>
-                                <TableCell>{contact.contact_position}</TableCell>
-                                <TableCell>{contact.contact_mobile}</TableCell>
-                                <TableCell>{contact.contact_email}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TabsContent>
+                        {/* Contacts Tab */}
+                        <TabsContent value="contacts" className="mt-6">
+                          <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50">
+                                  <TableHead className="font-semibold">Type</TableHead>
+                                  <TableHead className="font-semibold">Name</TableHead>
+                                  <TableHead className="font-semibold">Position</TableHead>
+                                  <TableHead className="font-semibold">Mobile</TableHead>
+                                  <TableHead className="font-semibold">Email</TableHead>
+                                  <TableHead className="font-semibold">Status</TableHead>
+                                  <TableHead className="font-semibold">Created Date</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {contacts.map((contact: any, idx: number) => (
+                                  <TableRow key={idx} className="hover:bg-blue-50/50">
+                                    <TableCell>
+                                      <Badge variant="outline" className="border-blue-300 text-blue-700 bg-blue-50">
+                                        {contact.contact_type}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-medium capitalize">{contact.contact_name}</TableCell>
+                                    <TableCell className="capitalize">{contact.contact_position}</TableCell>
+                                    <TableCell>{contact.contact_mobile}</TableCell>
+                                    <TableCell>{contact.contact_email}</TableCell>
+                                    <TableCell>
+                                      <Badge variant={contact.is_active === '1' ? 'default' : 'secondary'}>
+                                        {contact.is_active === '1' ? 'Active' : 'Inactive'}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>{formatDate(contact.created_date)}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </TabsContent>
 
-                      <TabsContent value="documents" className="mt-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {documents.map((doc: any, idx: number) => (
-                            <Card key={idx}>
-                              <CardContent className="pt-6">
-                                <div className="flex items-start gap-3">
-                                  <FileText className="h-5 w-5 text-muted-foreground mt-1" />
-                                  <div className="flex-1 space-y-2">
-                                    <div>
-                                      <p className="font-medium">{doc.document_name}</p>
-                                      <p className="text-sm text-muted-foreground">{doc.document_type}</p>
-                                    </div>
-                                    <Button variant="outline" size="sm" asChild>
-                                      <a href={doc.document_path} target="_blank" rel="noopener noreferrer">
-                                        View Document
-                                      </a>
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          );
-        })}
+                        {/* Documents Tab */}
+                        <TabsContent value="documents" className="mt-6">
+                          <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
+                            <Table>
+                              <TableHeader>
+                                <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50">
+                                  <TableHead className="font-semibold">Document Type</TableHead>
+                                  <TableHead className="font-semibold">Document Name</TableHead>
+                                  <TableHead className="font-semibold">Status</TableHead>
+                                  <TableHead className="font-semibold">Uploaded Date</TableHead>
+                                  <TableHead className="font-semibold">Actions</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {documents.map((doc: any, idx: number) => (
+                                  <TableRow key={idx} className="hover:bg-blue-50/50">
+                                    <TableCell>
+                                      <Badge variant="outline" className="border-orange-300 text-orange-700 bg-orange-50">
+                                        {doc.document_type}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="font-medium">{doc.document_name}</TableCell>
+                                    <TableCell>
+                                      <Badge variant={doc.is_active === '1' ? 'default' : 'secondary'}>
+                                        {doc.is_active === '1' ? 'Active' : 'Inactive'}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>{formatDate(doc.uploaded_date)}</TableCell>
+                                    <TableCell>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="gap-2 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300" 
+                                        asChild
+                                      >
+                                        <a href={doc.document_path} target="_blank" rel="noopener noreferrer">
+                                          <Eye className="h-3.5 w-3.5" />
+                                          View
+                                        </a>
+                                      </Button>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          {documents.length === 0 && (
+                            <div className="text-center py-12">
+                              <FileText className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                              <p className="text-slate-500">No documents uploaded</p>
+                            </div>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            );
+          })}
+        </div>
+
+        {filteredSuppliers.length === 0 && (
+          <Card className="p-12 text-center">
+            <Search className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <p className="text-slate-600 font-medium">No suppliers found matching your search</p>
+            <p className="text-slate-500 text-sm mt-2">Try adjusting your search criteria</p>
+          </Card>
+        )}
       </div>
     </div>
   );
 };
 
-const InfoItem = ({ label, value, className = '' }: { label: string; value: any; className?: string }) => (
-  <div className={className}>
-    <p className="text-xs text-muted-foreground mb-1">{label}</p>
-    <p className="font-medium">{value}</p>
-  </div>
-);
-
-export default KYCSupplierView;
+export default KYCDataView;

@@ -7,7 +7,8 @@ import formReducer from './features/formSlice'
 import configReducer from './features/configSlice'
 import masterDataReducer from './features/masterSlice'
 import decodeReducer from './features/decodeSlice'
-
+import hierarchyCompanyDetailsSlice from './features/hierarchyCompanyDetailsSlice'
+import sidebarSlice from './features/fetchSidebarDataSlice'
 export const store = configureStore({
   reducer: {
     ui: uiReducer,
@@ -15,7 +16,9 @@ export const store = configureStore({
     form: formReducer,
     masterData: masterDataReducer,
     config: configReducer,
-    decode: decodeReducer
+    decode: decodeReducer,
+    hierarchyCompanyDetails: hierarchyCompanyDetailsSlice,
+    sidebarSlice: sidebarSlice,
   }
 })
 

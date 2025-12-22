@@ -34,7 +34,9 @@ const Header: React.FC = () => {
     isFullscreen,
     setIsFullscreen,
     userData,
-    setUserData,
+    setUserData,  setActiveItem,
+    activeComponent,
+    setActiveComponent,
   } = useAppState() as any; // if your useAppState exports types, replace `any` with the proper type
 
   const navigate = useNavigate();
@@ -81,10 +83,12 @@ const Header: React.FC = () => {
     try {
       // Clear user data from state
       setUserData?.(null);
-
+       setActiveItem("");
+      activeComponent("");
+      setActiveComponent("");
       // Clear localStorage
       localStorage.removeItem("userToken");
-
+   
       // Navigate to login page
       navigate("/");
 
@@ -163,9 +167,9 @@ const Header: React.FC = () => {
             className="relative h-9 w-9 p-0 hover:bg-muted/50 transition-colors"
           >
             <Bell className="w-4 h-4" />
-            <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0">
+            {/* <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0">
               3
-            </Badge>
+            </Badge> */}
           </Button>
 
           {/* Settings */}

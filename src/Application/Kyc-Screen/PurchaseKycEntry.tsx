@@ -1,211 +1,105 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card,CardContent,CardHeader,CardTitle,CardDescription,} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent,DialogHeader, DialogTitle, DialogFooter,} from "@/components/ui/dialog";
-import {  Building2,MapPin, FileText, CreditCard, Users, Upload, CheckCircle2, AlertCircle, X, Loader2,} from "lucide-react";
 import { CustomInputField } from "@/CustomComponent/InputComponents/CustomInputField";
-import {useBasicInfoFields, useAddressFields, useBankFields, useContactFields, useDocumentFields, type FieldType,} from "@/FieldDatas/KycFieldDatas";
-import { useAppState } from "../../globalState/hooks/useAppState";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Building2,
+  MapPin,
+  FileText,
+  CreditCard,
+  Users,
+  Upload,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Loader2,
+} from "lucide-react";
+import {
+  useBasicInfoFields,
+  useAddressFields,
+  useBankFields,
+  useContactFields,
+  useDocumentFields,
+  type FieldType,
+} from "@/FieldDatas/KycFieldDatas";
 import usePost from "@/hooks/usePostHook";
 import { toast } from "sonner";
-
+import {selectHierarchy} from "@/globalState/features/hierarchyCompanyDetailsSlice";
 type DynamicFormData = Record<string, any>;
 type AdditionalAddress = Record<string, string>;
-type Option = { label: string; value: string | number };
-
-type Branch = {
-  brn_sno: number;
-  brn_name: string;
-};
-
-type Division = {
-  division_id: number;
-  div_sno: number;
-  div_name: string;
-  branches: Branch[];
-};
-
-type Company = {
-  company_id: number;
-  com_sno: number;
-  com_name: string;
-  divisions: Division[];
-};
-
-type CompanyHierarchyResponse = {
-  companies: Company[];
-};
 
 export default function SupplierKYCForm() {
   const addressFields = useAddressFields();
   const documentFields = useDocumentFields();
   const bankFields = useBankFields();
   const contactFields = useContactFields();
-
+console.log(selectHierarchy)
+  // Initialize the usePost hook
   const { postData, loading: submitting, error: submitError } = usePost();
 
-  // assumes useAppState gives you a way to fetch and store hierarchy
-  const {
-    data: hierarchyData,
-    loading: hierarchyLoading,
-    error: hierarchyError,
-    fetchCompanyHierarchy,
-    clearCompanyHierarchy,
-  } = useAppState<CompanyHierarchyResponse>();
-
-  // fetch hierarchy once
-  // useEffect(() => {
-  //   fetchCompanyHierarchy?.();
-  //   return () => {
-  //     clearCompanyHierarchy?.();
-  //   };
-  // }, [fetchCompanyHierarchy, clearCompanyHierarchy]);
-
-  // ----- initial state for dynamic groups -----
-
+  // Initialize dynamic states
   const initialAddressInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    addressFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = "";
-      });
+    addressFields.filter(field => field.input).forEach((field) => {
+      obj[field.field] = "";
+    });
     return obj;
   }, [addressFields]);
 
   const initialBankInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    bankFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = "";
-      });
+    bankFields.filter(field => field.input).forEach((field) => {
+      obj[field.field] = "";
+    });
     return obj;
   }, [bankFields]);
 
   const initialContactInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    contactFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = "";
-      });
+    contactFields.filter(field => field.input).forEach((field) => {
+      obj[field.field] = "";
+    });
     return obj;
   }, [contactFields]);
 
   const initialDocumentInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    documentFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = null;
-      });
+    documentFields.filter(field => field.input).forEach((field) => {
+      obj[field.field] = null;
+    });
     return obj;
   }, [documentFields]);
 
+  // State management
   const [basicInfo, setBasicInfo] = useState<DynamicFormData>({});
-  const [addressInfo, setAddressInfo] =
-    useState<DynamicFormData>(initialAddressInfo);
+  const [addressInfo, setAddressInfo] = useState<DynamicFormData>(initialAddressInfo);
   const [bankInfo, setBankInfo] = useState<DynamicFormData>(initialBankInfo);
-  const [contactInfo, setContactInfo] =
-    useState<DynamicFormData>(initialContactInfo);
-  const [documentInfo, setDocumentInfo] =
-    useState<DynamicFormData>(initialDocumentInfo);
-  const [additionalAddresses, setAdditionalAddresses] = useState<
-    AdditionalAddress[]
-  >([]);
+  const [contactInfo, setContactInfo] = useState<DynamicFormData>(initialContactInfo);
+  const [documentInfo, setDocumentInfo] = useState<DynamicFormData>(initialDocumentInfo);
+  const [additionalAddresses, setAdditionalAddresses] = useState<AdditionalAddress[]>([]);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // ------------ selected hierarchy ids ------------
-
-  const [selectedCompany, setSelectedCompany] = useState<number[]>([]);
-  const [selectedDivision, setSelectedDivision] = useState<number[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<number[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]); // adjust type if dept has id:number
-
-  // ------------- build options from API --------------
-
-  const companyOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.companies) return [];
-    return hierarchyData.companies.map((c) => ({
-      value: c.company_id,
-      label: c.com_name,
-    }));
-  }, [hierarchyData]);
-
-  const divisionOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.companies) return [];
-
-    // Allow multi-company selection; collect divisions for all selected companies
-    const selectedCompanySet = new Set(selectedCompany);
-    const divisions: Division[] = [];
-
-    hierarchyData.companies.forEach((company) => {
-      if (selectedCompanySet.size === 0 || selectedCompanySet.has(company.company_id)) {
-        company.divisions?.forEach((d) => divisions.push(d));
-      }
-    });
-
-    // de-duplicate by division_id
-    const seen = new Set<number>();
-    const opts: Option[] = [];
-    divisions.forEach((d) => {
-      if (!seen.has(d.division_id)) {
-        seen.add(d.division_id);
-        opts.push({ value: d.division_id, label: d.div_name });
-      }
-    });
-    return opts;
-  }, [hierarchyData, selectedCompany]);
-
-  const branchOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.companies) return [];
-
-    const selectedDivisionSet = new Set(selectedDivision);
-    const branches: Branch[] = [];
-
-    hierarchyData.companies.forEach((company) => {
-      company.divisions?.forEach((d) => {
-        if (selectedDivisionSet.size === 0 || selectedDivisionSet.has(d.division_id)) {
-          d.branches?.forEach((b) => branches.push(b));
-        }
-      });
-    });
-
-    const seen = new Set<number>();
-    const opts: Option[] = [];
-    branches.forEach((b) => {
-      if (!seen.has(b.brn_sno)) {
-        seen.add(b.brn_sno);
-        opts.push({ value: b.brn_sno, label: b.brn_name });
-      }
-    });
-    return opts;
-  }, [hierarchyData, selectedDivision]);
-
-  // If you have departments coming from API, build departmentOptions similarly
-  const departmentOptions: Option[] = useMemo(
-    () => [
-      { value: "dept-1", label: "Procurement" },
-      { value: "dept-2", label: "Finance" },
-      { value: "dept-3", label: "Operations" },
-    ],
-    []
-  );
-
   const basicInfoFields = useBasicInfoFields(basicInfo);
 
-  const handleChange =
-    (setState: React.Dispatch<React.SetStateAction<DynamicFormData>>) =>
-    (field: string, value: any) => {
-      setState((prev) => ({ ...prev, [field]: value }));
-    };
+  // Generic change handlers
+  const handleChange = (
+    setState: React.Dispatch<React.SetStateAction<DynamicFormData>>
+  ) => (field: string, value: any) => {
+    setState((prev) => ({ ...prev, [field]: value }));
+  };
 
   const handleBasicChange = handleChange(setBasicInfo);
   const handleAddressChange = handleChange(setAddressInfo);
@@ -213,6 +107,7 @@ export default function SupplierKYCForm() {
   const handleContactChange = handleChange(setContactInfo);
   const handleDocumentChange = handleChange(setDocumentInfo);
 
+  // Additional addresses management
   const handleAddAddress = () => {
     const newAddress: AdditionalAddress = {};
     addressFields.forEach((field) => {
@@ -237,6 +132,7 @@ export default function SupplierKYCForm() {
     });
   };
 
+  // Modal management
   const handleOpenModal = (section: string) => {
     setCurrentSection(section);
     setIsModalOpen(true);
@@ -249,51 +145,45 @@ export default function SupplierKYCForm() {
 
   const handleModalSave = async () => {
     setIsSaving(true);
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    console.log("Saving section:", currentSection);
     setIsSaving(false);
     handleCloseModal();
   };
 
+  // Validation function
   const validateForm = (): boolean => {
     const errors: string[] = [];
 
+    // Validate basic info
     basicInfoFields.forEach((field) => {
       if (field.require && !basicInfo[field.field]) {
         errors.push(`${field.label} is required`);
       }
     });
 
-    if (selectedCompany.length === 0) {
-      errors.push("At least one Company is required");
-    }
-    if (selectedDivision.length === 0) {
-      errors.push("At least one Division is required");
-    }
-    if (selectedBranch.length === 0) {
-      errors.push("At least one Branch is required");
-    }
-    if (selectedDepartment.length === 0) {
-      errors.push("At least one Department is required");
-    }
-
+    // Validate address
     addressFields.forEach((field) => {
       if (field.require && !addressInfo[field.field]) {
         errors.push(`Address: ${field.label} is required`);
       }
     });
 
+    // Validate bank info
     bankFields.forEach((field) => {
       if (field.require && !bankInfo[field.field]) {
         errors.push(`Bank: ${field.label} is required`);
       }
     });
 
+    // Validate contact info
     contactFields.forEach((field) => {
       if (field.require && !contactInfo[field.field]) {
         errors.push(`Contact: ${field.label} is required`);
       }
     });
 
+    // Validate documents
     documentFields.forEach((field) => {
       if (field.require && !documentInfo[field.field]) {
         errors.push(`Document: ${field.label} is required`);
@@ -304,60 +194,61 @@ export default function SupplierKYCForm() {
     return errors.length === 0;
   };
 
+  // Form submission with FormData for file uploads
   const handleSubmit = async () => {
+    // Validate form
     // if (!validateForm()) {
-    //   toast.error(
-    //     `Please fill all required fields. ${validationErrors.length} errors found.`
-    //   );
+    //      toast.error(`Please fill all required fields. ${validationErrors.length} errors found.`);
+      
+  
     //   return;
     // }
 
     try {
+      // Create FormData for file uploads
       const formData = new FormData();
 
-      // append ids (you can change key names as expected by backend)
-      formData.append("companyIds", JSON.stringify(selectedCompany));
-      formData.append("divisionIds", JSON.stringify(selectedDivision));
-      formData.append("branchIds", JSON.stringify(selectedBranch));
-      formData.append("departmentIds", JSON.stringify(selectedDepartment));
-
+      // Append basic info
       Object.entries(basicInfo).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
           formData.append(key, value);
         }
       });
 
+      // Append address info
       Object.entries(addressInfo).forEach(([key, value]) => {
         if (value) {
           formData.append(key, value);
         }
       });
 
+      // Append additional addresses as JSON
       if (additionalAddresses.length > 0) {
-        formData.append(
-          "additionalAddresses",
-          JSON.stringify(additionalAddresses)
-        );
+        formData.append("additionalAddresses", JSON.stringify(additionalAddresses));
       }
 
+      // Append bank info
       Object.entries(bankInfo).forEach(([key, value]) => {
         if (value) {
           formData.append(key, value);
         }
       });
 
+      // Append contact info
       Object.entries(contactInfo).forEach(([key, value]) => {
         if (value) {
           formData.append(key, value);
         }
       });
 
+      // Append document files
       Object.entries(documentInfo).forEach(([key, value]) => {
         if (value instanceof File) {
           formData.append(key, value);
         }
       });
 
+      // Submit using usePost hook
       const response = await postData(
         `${import.meta.env.VITE_API_URL}/api/kyc/create_kyc_records`,
         formData,
@@ -369,8 +260,9 @@ export default function SupplierKYCForm() {
       );
 
       if (response) {
-        toast.success("KYC submitted successfully!");
-
+        toast.success("KYC submitted successfully!")
+      
+        // Reset form after successful submission
         setBasicInfo({});
         setAddressInfo(initialAddressInfo);
         setBankInfo(initialBankInfo);
@@ -378,17 +270,14 @@ export default function SupplierKYCForm() {
         setDocumentInfo(initialDocumentInfo);
         setAdditionalAddresses([]);
         setValidationErrors([]);
-        setSelectedCompany([]);
-        setSelectedDivision([]);
-        setSelectedBranch([]);
-        setSelectedDepartment([]);
       }
     } catch (error: any) {
       console.error("KYC submission error:", error);
-      toast.error(error?.message || "An error occurred while submitting KYC");
+      toast.error(error?.message || "An error occurred while submitting KYC" );
     }
   };
 
+  // Completion status
   const getCompletionStatus = (section: string) => {
     switch (section) {
       case "address":
@@ -398,9 +287,7 @@ export default function SupplierKYCForm() {
       case "documents":
         return documentFields.some((field) => documentInfo[field.field]);
       case "account":
-        return bankFields.some(
-          (field) => field.require && bankInfo[field.field]
-        );
+        return bankFields.some((field) => field.require && bankInfo[field.field]);
       case "contacts":
         return contactFields.some(
           (field) => field.require && contactInfo[field.field]
@@ -410,6 +297,7 @@ export default function SupplierKYCForm() {
     }
   };
 
+  // Section Button Component
   const SectionButton = ({
     title,
     description,
@@ -456,6 +344,7 @@ export default function SupplierKYCForm() {
     );
   };
 
+  // Contact groups helper
   const getContactGroups = () => {
     const groups: Record<string, FieldType[]> = {};
     contactFields.forEach((field) => {
@@ -474,12 +363,10 @@ export default function SupplierKYCForm() {
       bo: "Business Operations Contact",
       acc: "Accounts Contact",
     };
-    return (
-      titles[prefix] ||
-      prefix.charAt(0).toUpperCase() + prefix.slice(1) + " Details"
-    );
+    return titles[prefix] || prefix.charAt(0).toUpperCase() + prefix.slice(1) + " Details";
   };
 
+  // Render modal content
   const renderModalContent = () => {
     switch (currentSection) {
       case "address":
@@ -530,11 +417,7 @@ export default function SupplierKYCForm() {
                           label={field.label}
                           value={addr[field.field] || ""}
                           onChange={(value) =>
-                            handleAdditionalAddressChange(
-                              index,
-                              field.field,
-                              value
-                            )
+                            handleAdditionalAddressChange(index, field.field, value)
                           }
                           placeholder={field.placeholder}
                           type={field.type}
@@ -661,6 +544,7 @@ export default function SupplierKYCForm() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto">
         <div className="space-y-6">
+          {/* Validation Errors Display */}
           {validationErrors.length > 0 && (
             <Card className="border-red-500 bg-red-50">
               <CardContent className="p-4">
@@ -684,97 +568,39 @@ export default function SupplierKYCForm() {
             </Card>
           )}
 
-          {/* Basic Information */}
+          {/* Basic Information Section */}
           <Card className="shadow-xl border-t-4 border-t-primary">
             <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
               <CardTitle className="text-2xl flex items-center gap-2">
                 <Building2 className="h-6 w-6" />
                 Basic Information
               </CardTitle>
-              <CardDescription>
-                Select company, division, branch and department
-              </CardDescription>
+              <CardDescription>Enter primary supplier details</CardDescription>
             </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              {/* Multi-selects using CustomInputField */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                <CustomInputField
-                  field="companyIds"
-                  label="Company"
-                  type="multi-select"
-                  options={companyOptions}
-                  value={selectedCompany}
-                  onChange={(vals: (number | string)[]) =>
-                    setSelectedCompany(vals.map((v) => Number(v)))
-                  }
-                  require
-                  disabled={hierarchyLoading || !!hierarchyError}
-                />
-                <CustomInputField
-                  field="divisionIds"
-                  label="Division"
-                  type="multi-select"
-                  options={divisionOptions}
-                  value={selectedDivision}
-                  onChange={(vals: (number | string)[]) =>
-                    setSelectedDivision(vals.map((v) => Number(v)))
-                  }
-                  require
-                  disabled={divisionOptions.length === 0}
-                />
-                <CustomInputField
-                  field="branchIds"
-                  label="Branch"
-                  type="multi-select"
-                  options={branchOptions}
-                  value={selectedBranch}
-                  onChange={(vals: (number | string)[]) =>
-                    setSelectedBranch(vals.map((v) => Number(v)))
-                  }
-                  require
-                  disabled={branchOptions.length === 0}
-                />
-                <CustomInputField
-                  field="departmentIds"
-                  label="Department"
-                  type="multi-select"
-                  options={departmentOptions}
-                  value={selectedDepartment}
-                  onChange={(vals: (string | number)[]) =>
-                    setSelectedDepartment(vals.map(String))
-                  }
-                  require
-                />
+            <CardContent className="pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {basicInfoFields
+                  .filter((field) => field.input)
+                  .map((field) => (
+                    <div
+                      key={field.field}
+                      className={
+                        field.type === "radio" ? "md:row-span-1 lg:row-span-1" : ""
+                      }
+                    >
+                      <CustomInputField
+                        field={field.field}
+                        label={field.label}
+                        require={field.require}
+                        value={basicInfo[field.field] || ""}
+                        onChange={(v) => handleBasicChange(field.field, v)}
+                        placeholder={field.placeholder}
+                        type={field.type}
+                        options={field.options}
+                      />
+                    </div>
+                  ))}
               </div>
-
-              {/* Existing basic fields (if any) */}
-              {basicInfoFields.some((f) => f.input) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {basicInfoFields
-                    .filter((field) => field.input)
-                    .map((field) => (
-                      <div
-                        key={field.field}
-                        className={
-                          field.type === "radio"
-                            ? "md:row-span-1 lg:row-span-1"
-                            : ""
-                        }
-                      >
-                        <CustomInputField
-                          field={field.field}
-                          label={field.label}
-                          require={field.require}
-                          value={basicInfo[field.field] || ""}
-                          onChange={(v) => handleBasicChange(field.field, v)}
-                          placeholder={field.placeholder}
-                          type={field.type}
-                          options={field.options}
-                        />
-                      </div>
-                    ))}
-                </div>
-              )}
             </CardContent>
           </Card>
 
@@ -792,18 +618,21 @@ export default function SupplierKYCForm() {
                 icon={MapPin}
                 section="address"
               />
+
               <SectionButton
                 title="Bank Account Details"
                 description="Banking information for transactions"
                 icon={CreditCard}
                 section="account"
               />
+
               <SectionButton
                 title="Contact Information"
                 description="Key personnel and their contact details"
                 icon={Users}
                 section="contacts"
               />
+
               <SectionButton
                 title="Document Upload"
                 description="Upload required certificates and documents"
@@ -818,9 +647,8 @@ export default function SupplierKYCForm() {
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
                 <div className="text-center sm:text-left">
-                  <h3 className="text-xl font-semibold mb-1">
-                    Ready to Submit
-                  </h3>
+                  <h3 className="text-xl font-semibold mb-1">Ready to Submit</h3>
+                 
                   {submitError && (
                     <p className="text-sm text-red-600 mt-2">{submitError}</p>
                   )}
@@ -876,11 +704,7 @@ export default function SupplierKYCForm() {
           </div>
 
           <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              onClick={handleCloseModal}
-              disabled={isSaving}
-            >
+            <Button variant="outline" onClick={handleCloseModal} disabled={isSaving}>
               Cancel
             </Button>
             <Button onClick={handleModalSave} disabled={isSaving}>

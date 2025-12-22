@@ -2,6 +2,7 @@ import { lazy, LazyExoticComponent, ComponentType } from "react";
 import { Home, X, LogOut, BarChart3, Users, ShoppingCart, Calendar, Settings,
   ChevronDown, ChevronRight, Menu, Building2, GitBranch, Network, FileText, ShieldCheck,
   Package, Globe, Search, Bell, User, DollarSign, Eye, Plus, Edit, Trash, } from "lucide-react";
+// import PurchaseRequisitionPage from "@/Application/PR/PurchaseRequisitionPage";
 // Lazy-loaded components
  export const MasterComponents = lazy(() => import(".././Application/Master-Screen/MasterPageScreen"));
 // const PurchaseRequisitionForm = lazy(() => import("../MasterDataManagement/PurchaseRequisitionForm"));
@@ -11,6 +12,8 @@ import { Home, X, LogOut, BarChart3, Users, ShoppingCart, Calendar, Settings,
 // const BudgetRequest = lazy(() => import("../MasterDataManagement/BudgetRequestPage"));
  export const KYCEntry = lazy(() => import("../Application/Kyc-Screen/KycEntry"));
  export const RoleApproval = lazy(() => import("../Application/RoleApproval/UserRoleApprovalScreen"));
+ export const KYCDataView = lazy(() => import("../Application/Kyc-Screen/KYCDataView"));
+ export const PurchaseRequisitionPage = lazy(() => import("../Application/PR/PurchaseRequisitionPage"));
 // Interface for the component map
 export interface SectionComponentsMap {
   [key: string]: LazyExoticComponent<ComponentType<any>>;
@@ -25,5 +28,7 @@ export const sectionComponents: SectionComponentsMap = {
 //   PurReqAuthorization,
 //   HodApproval,
 //   BudgetRequest,
-KYCEntry
+KYCEntry,
+KYCDataView,
+PurchaseRequisitionPage
 };

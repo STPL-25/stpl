@@ -60,6 +60,20 @@ const Sidebar: React.FC = () => {
     }[]
   >([]);
 
+  // Auto-select first menu item when menu loads
+useEffect(() => {
+  if (menu.length > 0) {
+    const firstItem = menu[0];
+    
+    // Only set if no component is currently selected
+    if (!activeComponent || activeComponent === null) {
+      setActiveItem?.(firstItem.key);
+      setActiveComponent?.(firstItem.screenId);
+      setHeaderComponentRender?.(firstItem.label);
+    }
+  }
+}, [menu, activeComponent, setActiveItem, setActiveComponent, setHeaderComponentRender]);
+
   useEffect(() => {
     if (!data?.data?.screens) {
       setMenu([]);
@@ -127,7 +141,8 @@ const Sidebar: React.FC = () => {
           style={{ width: isCollapsed ? "80px" : `${sidebarWidth}px` }}
         >
           {/* Header */}
-          <div className="p-4 border-b border-border/50 bg-background/50 backdrop-blur-sm">
+          <div className="p-4  bg-background/50 backdrop-blur-sm">
+          {/* border-b border-border/50 */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <Tooltip>
