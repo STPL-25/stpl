@@ -24,17 +24,7 @@ interface StoredUserToken {
 function App() {
   const { userData, decryptData } = useAppState();
   const cryptoSecret = import.meta.env.VITE_CRYPTO_SECRET as string;
-useEffect(() => {
-  const init = async () => {
-    const res = await axios.get(
-      `${import.meta.env.VITE_API_URL}/api/csrf-token`,
-      { withCredentials: true }
-    );
-    console.log("Testttttttt",res.data.csrfToken)
-  };
 
-  init();
-}, []);
   useEffect(() => {
     const stored = localStorage.getItem("userToken");
 

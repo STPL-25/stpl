@@ -1,206 +1,120 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Card,CardContent,CardHeader,CardTitle,CardDescription,} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent,DialogHeader, DialogTitle, DialogFooter,} from "@/components/ui/dialog";
-import {  Building2,MapPin, FileText, CreditCard, Users, Upload, CheckCircle2, AlertCircle, X, Loader2,} from "lucide-react";
+import {  Building2, MapPin, FileText, CreditCard, Users, Upload,CheckCircle2,
+  AlertCircle, X, Loader2,  ChevronRight,  Plus,} from "lucide-react";
 import { CustomInputField } from "@/CustomComponent/InputComponents/CustomInputField";
-import {useBasicInfoFields, useAddressFields, useBankFields, useContactFields, useDocumentFields, type FieldType,} from "@/FieldDatas/KycFieldDatas";
+import {  useBasicInfoFields, useAddressFields,  useBankFields,  useContactFields,  useDocumentFields,useComDivBranchDeptFields } from "@/FieldDatas/KycFieldDatas";
 import { useAppState } from "../../globalState/hooks/useAppState";
 import usePost from "@/hooks/usePostHook";
 import { toast } from "sonner";
-
-type DynamicFormData = Record<string, any>;
-type AdditionalAddress = Record<string, string>;
-type Option = { label: string; value: string | number };
-
-type Branch = {
-  brn_sno: number;
-  brn_name: string;
-};
-
-type Division = {
-  division_id: number;
-  div_sno: number;
-  div_name: string;
-  branches: Branch[];
-};
-
-type Company = {
-  company_id: number;
-  com_sno: number;
-  com_name: string;
-  divisions: Division[];
-};
-
-type CompanyHierarchyResponse = {
-  companies: Company[];
-};
+import { apiPostKycData } from "@/Services/Api";
+import DynamicDialog from "@/CustomComponent/InputComponents/CustomModelComponent";
+import {DynamicFormData, AdditionalAddress, BankDetail, ContactDetail, Option, Branch, Division, Company} from "./types/KycEntryType";
 
 export default function SupplierKYCForm() {
   const addressFields = useAddressFields();
   const documentFields = useDocumentFields();
   const bankFields = useBankFields();
   const contactFields = useContactFields();
-
   const { postData, loading: submitting, error: submitError } = usePost();
+  const { data: hierarchyData, loading: hierarchyLoading, error: hierarchyError } = useAppState();
 
-  // assumes useAppState gives you a way to fetch and store hierarchy
-  const {
-    data: hierarchyData,
-    loading: hierarchyLoading,
-    error: hierarchyError,
-    fetchCompanyHierarchy,
-    clearCompanyHierarchy,
-  } = useAppState<CompanyHierarchyResponse>();
-
-  // fetch hierarchy once
-  // useEffect(() => {
-  //   fetchCompanyHierarchy?.();
-  //   return () => {
-  //     clearCompanyHierarchy?.();
-  //   };
-  // }, [fetchCompanyHierarchy, clearCompanyHierarchy]);
-
-  // ----- initial state for dynamic groups -----
-
+  // Initialize state objects
   const initialAddressInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    addressFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = "";
-      });
+    addressFields.filter((field) => field.input).forEach((field) => {
+      obj[field.field] = "";
+    });
     return obj;
   }, [addressFields]);
 
   const initialBankInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    bankFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = "";
-      });
+    bankFields.filter((field) => field.input).forEach((field) => {
+      obj[field.field] = "";
+    });
     return obj;
   }, [bankFields]);
 
   const initialContactInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    contactFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = "";
-      });
+    contactFields.filter((field) => field.input).forEach((field) => {
+      obj[field.field] = "";
+    });
     return obj;
   }, [contactFields]);
 
   const initialDocumentInfo = useMemo(() => {
     const obj: DynamicFormData = {};
-    documentFields
-      .filter((field) => field.input)
-      .forEach((field) => {
-        obj[field.field] = null;
-      });
+    documentFields.filter((field) => field.input).forEach((field) => {
+      obj[field.field] = null;
+    });
     return obj;
   }, [documentFields]);
 
   const [basicInfo, setBasicInfo] = useState<DynamicFormData>({});
-  const [addressInfo, setAddressInfo] =
-    useState<DynamicFormData>(initialAddressInfo);
+  const [addressInfo, setAddressInfo] = useState<DynamicFormData>(initialAddressInfo);
   const [bankInfo, setBankInfo] = useState<DynamicFormData>(initialBankInfo);
-  const [contactInfo, setContactInfo] =
-    useState<DynamicFormData>(initialContactInfo);
-  const [documentInfo, setDocumentInfo] =
-    useState<DynamicFormData>(initialDocumentInfo);
-  const [additionalAddresses, setAdditionalAddresses] = useState<
-    AdditionalAddress[]
-  >([]);
-
+  const [contactInfo, setContactInfo] = useState<DynamicFormData>(initialContactInfo);
+  const [documentInfo, setDocumentInfo] = useState<DynamicFormData>(initialDocumentInfo);
+  const [additionalAddresses, setAdditionalAddresses] = useState<AdditionalAddress[]>([]);
+  const [additionalBankDetails, setAdditionalBankDetails] = useState<BankDetail[]>([]);
+  const [additionalContacts, setAdditionalContacts] = useState<ContactDetail[]>([]);
+  // NEW: State for primary bank cancel cheque
+  const [primaryBankCancelCheque, setPrimaryBankCancelCheque] = useState<File | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState<string>("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
-
-  // ------------ selected hierarchy ids ------------
-
   const [selectedCompany, setSelectedCompany] = useState<number[]>([]);
   const [selectedDivision, setSelectedDivision] = useState<number[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<number[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]); // adjust type if dept has id:number
+  const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
+ const {  
+    companyOptions,
+    divisionOptions,
+    branchOptions,
+    departmentOptions,
+   
+  } = useComDivBranchDeptFields(selectedCompany, selectedDivision);
+  // Options
+  // const companyOptions: Option[] = useMemo(() => {
+  //   if (!hierarchyData?.companies) return [];
+  //   return hierarchyData.companies.map((company: Company) => ({
+  //     label: company.com_name,
+  //     value: company.com_sno,
+  //   }));
+  // }, [hierarchyData]);
 
-  // ------------- build options from API --------------
+  // const divisionOptions: Option[] = useMemo(() => {
+  //   if (!hierarchyData?.divisions || selectedCompany.length === 0) return [];
+  //   return hierarchyData.divisions.map((division: Division) => ({
+  //     label: division.div_name,
+  //     value: division.div_sno,
+  //   }));
+  // }, [hierarchyData, selectedCompany]);
 
-  const companyOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.companies) return [];
-    return hierarchyData.companies.map((c) => ({
-      value: c.company_id,
-      label: c.com_name,
-    }));
-  }, [hierarchyData]);
+  // const branchOptions: Option[] = useMemo(() => {
+  //   if (!hierarchyData?.branches || selectedDivision.length === 0) return [];
+  //   return hierarchyData.branches.map((branch: Branch) => ({
+  //     label: branch.brn_name,
+  //     value: branch.brn_sno,
+  //   }));
+  // }, [hierarchyData, selectedDivision]);
 
-  const divisionOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.companies) return [];
-
-    // Allow multi-company selection; collect divisions for all selected companies
-    const selectedCompanySet = new Set(selectedCompany);
-    const divisions: Division[] = [];
-
-    hierarchyData.companies.forEach((company) => {
-      if (selectedCompanySet.size === 0 || selectedCompanySet.has(company.company_id)) {
-        company.divisions?.forEach((d) => divisions.push(d));
-      }
-    });
-
-    // de-duplicate by division_id
-    const seen = new Set<number>();
-    const opts: Option[] = [];
-    divisions.forEach((d) => {
-      if (!seen.has(d.division_id)) {
-        seen.add(d.division_id);
-        opts.push({ value: d.division_id, label: d.div_name });
-      }
-    });
-    return opts;
-  }, [hierarchyData, selectedCompany]);
-
-  const branchOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.companies) return [];
-
-    const selectedDivisionSet = new Set(selectedDivision);
-    const branches: Branch[] = [];
-
-    hierarchyData.companies.forEach((company) => {
-      company.divisions?.forEach((d) => {
-        if (selectedDivisionSet.size === 0 || selectedDivisionSet.has(d.division_id)) {
-          d.branches?.forEach((b) => branches.push(b));
-        }
-      });
-    });
-
-    const seen = new Set<number>();
-    const opts: Option[] = [];
-    branches.forEach((b) => {
-      if (!seen.has(b.brn_sno)) {
-        seen.add(b.brn_sno);
-        opts.push({ value: b.brn_sno, label: b.brn_name });
-      }
-    });
-    return opts;
-  }, [hierarchyData, selectedDivision]);
-
-  // If you have departments coming from API, build departmentOptions similarly
-  const departmentOptions: Option[] = useMemo(
-    () => [
-      { value: "dept-1", label: "Procurement" },
-      { value: "dept-2", label: "Finance" },
-      { value: "dept-3", label: "Operations" },
-    ],
-    []
-  );
+  // const departmentOptions: Option[] = useMemo(
+  //   () => [
+  //     { value: "dept-1", label: "Procurement" },
+  //     { value: "dept-2", label: "Finance" },
+  //     { value: "dept-3", label: "Operations" },
+  //   ],
+  //   []
+  // );
 
   const basicInfoFields = useBasicInfoFields(basicInfo);
 
+  // Handlers
   const handleChange =
     (setState: React.Dispatch<React.SetStateAction<DynamicFormData>>) =>
     (field: string, value: any) => {
@@ -213,6 +127,26 @@ export default function SupplierKYCForm() {
   const handleContactChange = handleChange(setContactInfo);
   const handleDocumentChange = handleChange(setDocumentInfo);
 
+  const handleCompanyChange = (vals: (number | string)[]) => {
+    const newCompanyIds = vals.map((v) => Number(v));
+    setSelectedCompany(newCompanyIds);
+
+    if (newCompanyIds.length === 0) {
+      setSelectedDivision([]);
+      setSelectedBranch([]);
+    }
+  };
+
+  const handleDivisionChange = (vals: (number | string)[]) => {
+    const newDivisionIds = vals.map((v) => Number(v));
+    setSelectedDivision(newDivisionIds);
+
+    if (newDivisionIds.length === 0) {
+      setSelectedBranch([]);
+    }
+  };
+
+  // Address handlers
   const handleAddAddress = () => {
     const newAddress: AdditionalAddress = {};
     addressFields.forEach((field) => {
@@ -237,6 +171,79 @@ export default function SupplierKYCForm() {
     });
   };
 
+  // Bank details handlers
+  const handleAddBankDetail = () => {
+    const newBankDetail: BankDetail = { 
+      id: `bank_${Date.now()}`,
+      cancelChequeFile: null // Initialize with null
+    };
+    bankFields.filter((field) => field.input).forEach((field) => {
+      newBankDetail[field.field] = "";
+    });
+    setAdditionalBankDetails((prev) => [...prev, newBankDetail]);
+  };
+
+  const handleRemoveBankDetail = (index: number) => {
+    setAdditionalBankDetails((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAdditionalBankChange = (
+    index: number,
+    field: string,
+    value: string
+  ) => {
+    setAdditionalBankDetails((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  // NEW: Handler for bank cancel cheque file
+  const handleBankCancelChequeChange = (index: number, file: File | null) => {
+    setAdditionalBankDetails((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], cancelChequeFile: file };
+      return updated;
+    });
+  };
+
+  // Contact handlers
+  const handleAddContact = () => {
+    const newContact: ContactDetail = { 
+      id: `contact_${Date.now()}`, 
+      document: null 
+    };
+    contactFields.filter((field) => field.input).forEach((field) => {
+      newContact[field.field] = "";
+    });
+    setAdditionalContacts((prev) => [...prev, newContact]);
+  };
+
+  const handleRemoveContact = (index: number) => {
+    setAdditionalContacts((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAdditionalContactChange = (
+    index: number,
+    field: string,
+    value: any
+  ) => {
+    setAdditionalContacts((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const handleContactDocumentChange = (index: number, file: File | null) => {
+    setAdditionalContacts((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], document: file };
+      return updated;
+    });
+  };
+
   const handleOpenModal = (section: string) => {
     setCurrentSection(section);
     setIsModalOpen(true);
@@ -248,74 +255,14 @@ export default function SupplierKYCForm() {
   };
 
   const handleModalSave = async () => {
-    setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 300));
-    setIsSaving(false);
     handleCloseModal();
   };
 
-  const validateForm = (): boolean => {
-    const errors: string[] = [];
-
-    basicInfoFields.forEach((field) => {
-      if (field.require && !basicInfo[field.field]) {
-        errors.push(`${field.label} is required`);
-      }
-    });
-
-    if (selectedCompany.length === 0) {
-      errors.push("At least one Company is required");
-    }
-    if (selectedDivision.length === 0) {
-      errors.push("At least one Division is required");
-    }
-    if (selectedBranch.length === 0) {
-      errors.push("At least one Branch is required");
-    }
-    if (selectedDepartment.length === 0) {
-      errors.push("At least one Department is required");
-    }
-
-    addressFields.forEach((field) => {
-      if (field.require && !addressInfo[field.field]) {
-        errors.push(`Address: ${field.label} is required`);
-      }
-    });
-
-    bankFields.forEach((field) => {
-      if (field.require && !bankInfo[field.field]) {
-        errors.push(`Bank: ${field.label} is required`);
-      }
-    });
-
-    contactFields.forEach((field) => {
-      if (field.require && !contactInfo[field.field]) {
-        errors.push(`Contact: ${field.label} is required`);
-      }
-    });
-
-    documentFields.forEach((field) => {
-      if (field.require && !documentInfo[field.field]) {
-        errors.push(`Document: ${field.label} is required`);
-      }
-    });
-
-    setValidationErrors(errors);
-    return errors.length === 0;
-  };
-
   const handleSubmit = async () => {
-    // if (!validateForm()) {
-    //   toast.error(
-    //     `Please fill all required fields. ${validationErrors.length} errors found.`
-    //   );
-    //   return;
-    // }
-
     try {
       const formData = new FormData();
 
-      // append ids (you can change key names as expected by backend)
       formData.append("companyIds", JSON.stringify(selectedCompany));
       formData.append("divisionIds", JSON.stringify(selectedDivision));
       formData.append("branchIds", JSON.stringify(selectedBranch));
@@ -334,50 +281,91 @@ export default function SupplierKYCForm() {
       });
 
       if (additionalAddresses.length > 0) {
-        formData.append(
-          "additionalAddresses",
-          JSON.stringify(additionalAddresses)
-        );
+        formData.append("additionalAddresses", JSON.stringify(additionalAddresses));
       }
 
+      // ===== BANK INFORMATION WITH CANCEL CHEQUE FILES =====
+      // Primary Bank Details
       Object.entries(bankInfo).forEach(([key, value]) => {
         if (value) {
           formData.append(key, value);
         }
       });
 
+      // Primary Bank Cancel Cheque File
+      if (primaryBankCancelCheque) {
+        formData.append("primaryBankCancelCheque", primaryBankCancelCheque);
+      }
+
+      // Additional Bank Details with Cancel Cheques
+      if (additionalBankDetails.length > 0) {
+        const bankDetailsData = additionalBankDetails.map(
+          ({ id, cancelChequeFile, ...bank }) => ({
+            id,
+            ...bank,
+            hasCancelCheque: !!cancelChequeFile,
+          })
+        );
+        formData.append("additionalBankDetails", JSON.stringify(bankDetailsData));
+
+        // Append each cancel cheque file with unique identifier
+        additionalBankDetails.forEach((bank, index) => {
+          if (bank.cancelChequeFile) {
+            formData.append(`bankCancelCheque_${index}`, bank.cancelChequeFile);
+          }
+        });
+      }
+
+      // ===== PRIMARY CONTACT (OWNER/AUTHORIZED PERSON) =====
       Object.entries(contactInfo).forEach(([key, value]) => {
         if (value) {
           formData.append(key, value);
         }
       });
 
+      // ===== ADDITIONAL CONTACTS WITH DOCUMENTS =====
+      if (additionalContacts.length > 0) {
+        const contactsData = additionalContacts.map(({ id, document, ...contact }) => ({
+          id,
+          ...contact,
+          hasDocument: !!document,
+        }));
+        formData.append("additionalContacts", JSON.stringify(contactsData));
+
+        // Append each contact document with unique identifier
+        additionalContacts.forEach((contact, index) => {
+          if (contact.document) {
+            formData.append(`contactDocument_${index}`, contact.document);
+          }
+        });
+      }
+
+      // ===== GENERAL DOCUMENTS =====
       Object.entries(documentInfo).forEach(([key, value]) => {
         if (value instanceof File) {
           formData.append(key, value);
         }
       });
 
-      const response = await postData(
-        `${import.meta.env.VITE_API_URL}/api/kyc/create_kyc_records`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const response = await postData(apiPostKycData, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response) {
         toast.success("KYC submitted successfully!");
 
+        // Reset all states
         setBasicInfo({});
         setAddressInfo(initialAddressInfo);
         setBankInfo(initialBankInfo);
         setContactInfo(initialContactInfo);
         setDocumentInfo(initialDocumentInfo);
         setAdditionalAddresses([]);
-        setValidationErrors([]);
+        setAdditionalBankDetails([]);
+        setAdditionalContacts([]);
+        setPrimaryBankCancelCheque(null); 
         setSelectedCompany([]);
         setSelectedDivision([]);
         setSelectedBranch([]);
@@ -392,91 +380,56 @@ export default function SupplierKYCForm() {
   const getCompletionStatus = (section: string) => {
     switch (section) {
       case "address":
-        return addressFields.some(
-          (field) => field.require && addressInfo[field.field]
-        );
+        return addressFields.some((field) => field.require && addressInfo[field.field]) ||
+          additionalAddresses.length > 0;
       case "documents":
         return documentFields.some((field) => documentInfo[field.field]);
       case "account":
-        return bankFields.some(
-          (field) => field.require && bankInfo[field.field]
-        );
+        return (bankFields.some((field) => field.require && bankInfo[field.field]) && 
+          primaryBankCancelCheque !== null) ||
+          additionalBankDetails.length > 0;
       case "contacts":
-        return contactFields.some(
-          (field) => field.require && contactInfo[field.field]
-        );
+        return contactFields.some((field) => field.require && contactInfo[field.field]) ||
+          additionalContacts.length > 0;
       default:
         return false;
     }
   };
 
-  const SectionButton = ({
-    title,
-    description,
-    icon: Icon,
-    section,
-  }: {
-    title: string;
-    description?: string;
-    icon: any;
-    section: string;
-  }) => {
+  const SectionButton = ({ title,  description,  icon: Icon,  section, }: {
+    title: string;  description?: string;  icon: any;   section: string;  }) => {
     const isComplete = getCompletionStatus(section);
 
     return (
-      <Card
-        className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50 group"
+      <button
         onClick={() => handleOpenModal(section)}
+        className="group relative w-full text-left overflow-hidden rounded-xl border border-gray-200 bg-white p-5 transition-all hover:border-primary/50 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
       >
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                <Icon className="h-6 w-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg mb-1">{title}</h3>
-                <p className="text-sm text-muted-foreground">{description}</p>
-              </div>
-            </div>
-            {isComplete ? (
-              <Badge variant="default" className="bg-green-500 hover:bg-green-600">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                Complete
-              </Badge>
-            ) : (
-              <Badge variant="secondary">
-                <AlertCircle className="h-3 w-3 mr-1" />
-                Pending
-              </Badge>
-            )}
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 rounded-lg bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
+            <Icon className="h-6 w-6 text-primary" />
           </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
-  const getContactGroups = () => {
-    const groups: Record<string, FieldType[]> = {};
-    contactFields.forEach((field) => {
-      const prefix = field.field.match(/^[a-z]+/)?.[0] || "other";
-      if (!groups[prefix]) {
-        groups[prefix] = [];
-      }
-      groups[prefix].push(field);
-    });
-    return groups;
-  };
-
-  const getGroupTitle = (prefix: string): string => {
-    const titles: Record<string, string> = {
-      owner: "Owner Details",
-      bo: "Business Operations Contact",
-      acc: "Accounts Contact",
-    };
-    return (
-      titles[prefix] ||
-      prefix.charAt(0).toUpperCase() + prefix.slice(1) + " Details"
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <h3 className="font-semibold text-gray-900 text-base group-hover:text-primary transition-colors">
+                {title}
+              </h3>
+              {isComplete ? (
+                <Badge className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-600 text-xs">
+                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  Done
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="flex-shrink-0 text-xs">
+                  Pending
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 line-clamp-2">{description}</p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 flex-shrink-0" />
+        </div>
+      </button>
     );
   };
 
@@ -485,6 +438,7 @@ export default function SupplierKYCForm() {
       case "address":
         return (
           <div className="space-y-6">
+            {/* Primary Address */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {addressFields
                 .filter((field) => field.input)
@@ -502,110 +456,287 @@ export default function SupplierKYCForm() {
                 ))}
             </div>
 
-            <div className="mt-6">
-              <h3 className="font-semibold mb-4 text-lg">
-                Additional Business Locations
-              </h3>
-              {additionalAddresses.map((addr, index) => (
-                <div
-                  key={index}
-                  className="mb-6 p-4 border rounded-lg bg-slate-50 relative"
-                >
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveAddress(index)}
-                    className="absolute top-2 right-2 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    {addressFields
-                      .filter((field) => field.input)
-                      .map((field) => (
-                        <CustomInputField
-                          key={`${field.field}-${index}`}
-                          field={`${field.field}-${index}`}
-                          label={field.label}
-                          value={addr[field.field] || ""}
-                          onChange={(value) =>
-                            handleAdditionalAddressChange(
-                              index,
-                              field.field,
-                              value
-                            )
-                          }
-                          placeholder={field.placeholder}
-                          type={field.type}
-                        />
-                      ))}
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddAddress}
-                className="w-full"
+            {additionalAddresses.length > 0 && <Separator className="my-6" />}
+
+            {/* Additional Addresses */}
+            {additionalAddresses.map((addr, index) => (
+              <div
+                key={index}
+                className="relative rounded-lg border border-gray-200 bg-gray-50 p-4"
               >
-                + Add Another Location
-              </Button>
-            </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveAddress(index)}
+                  className="absolute top-3 right-3 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <h4 className="text-sm font-medium text-gray-900 mb-4">
+                  Additional Location {index + 1}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {addressFields
+                    .filter((field) => field.input)
+                    .map((field) => (
+                      <CustomInputField
+                        key={`${field.field}-${index}`}
+                        field={`${field.field}-${index}`}
+                        label={field.label}
+                        value={addr[field.field] || ""}
+                        onChange={(value) =>
+                          handleAdditionalAddressChange(index, field.field, value)
+                        }
+                        placeholder={field.placeholder}
+                        type={field.type}
+                      />
+                    ))}
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddAddress}
+              className="w-full border-dashed hover:border-solid"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Another Location
+            </Button>
           </div>
         );
 
       case "account":
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {bankFields
-              .filter((field) => field.input)
-              .map((field) => (
+          <div className="space-y-6">
+            {/* Primary Bank Details */}
+            <div>
+              <h3 className="font-semibold text-base mb-4 flex items-center gap-2 text-gray-900">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Primary Bank Account
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {bankFields
+                  .filter((field) => field.input)
+                  .map((field) => (
+                    <CustomInputField
+                      key={field.field}
+                      field={field.field}
+                      label={field.label}
+                      require={field.require}
+                      value={bankInfo[field.field] || ""}
+                      onChange={(v) => handleBankChange(field.field, v)}
+                      placeholder={field.placeholder}
+                      type={field.type}
+                    />
+                  ))}
+              </div>
+              
+              {/* Primary Bank Cancel Cheque Upload */}
+              <Separator className="my-4" />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                  <Upload className="h-4 w-4 text-primary" />
+                  Cancelled Cheque Leaf <span className="text-red-500">*</span>
+                </label>
                 <CustomInputField
-                  key={field.field}
-                  field={field.field}
-                  label={field.label}
-                  require={field.require}
-                  value={bankInfo[field.field] || ""}
-                  onChange={(v) => handleBankChange(field.field, v)}
-                  placeholder={field.placeholder}
-                  type={field.type}
+                  field="primary-bank-cancel-cheque"
+                  label=""
+                  type="file"
+                  value={primaryBankCancelCheque}
+                  onChange={(fileOrNull: File | null) =>
+                    setPrimaryBankCancelCheque(fileOrNull)
+                  }
                 />
-              ))}
+                {primaryBankCancelCheque && (
+                  <p className="text-xs text-gray-600 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                    {primaryBankCancelCheque.name}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {additionalBankDetails.length > 0 && <Separator className="my-6" />}
+
+            {/* Additional Bank Details with Cancel Cheque */}
+            {additionalBankDetails.map((bank, index) => (
+              <div
+                key={bank.id}
+                className="relative rounded-lg border border-gray-200 bg-gray-50 p-4"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveBankDetail(index)}
+                  className="absolute top-3 right-3 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <h4 className="text-sm font-medium text-gray-900 mb-4">
+                  Bank Account {index + 2}
+                </h4>
+                
+                {/* Bank Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {bankFields
+                    .filter((field) => field.input)
+                    .map((field) => (
+                      <CustomInputField
+                        key={`${field.field}-${bank.id}`}
+                        field={`${field.field}-${bank.id}`}
+                        label={field.label}
+                        value={bank[field.field] || ""}
+                        onChange={(value) =>
+                          handleAdditionalBankChange(index, field.field, value)
+                        }
+                        placeholder={field.placeholder}
+                        type={field.type}
+                      />
+                    ))}
+                </div>
+
+                {/* Cancel Cheque Upload for THIS Additional Bank */}
+                <Separator className="my-4" />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-primary" />
+                    Cancelled Cheque Leaf <span className="text-red-500">*</span>
+                  </label>
+                  <CustomInputField
+                    field={`bank-cancel-cheque-${bank.id}`}
+                    label=""
+                    type="file"
+                    value={bank.cancelChequeFile ?? null}
+                    onChange={(fileOrNull: File | null) =>
+                      handleBankCancelChequeChange(index, fileOrNull)
+                    }
+                  />
+                  {bank.cancelChequeFile && (
+                    <p className="text-xs text-gray-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                      {bank.cancelChequeFile.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddBankDetail}
+              className="w-full border-dashed hover:border-solid"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Another Bank Account
+            </Button>
           </div>
         );
 
       case "contacts":
-        const contactGroups = getContactGroups();
         return (
           <div className="space-y-6">
-            {Object.entries(contactGroups).map(([prefix, fields], groupIndex) => (
-              <React.Fragment key={prefix}>
-                {groupIndex > 0 && <Separator />}
-                <div>
-                  <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    {getGroupTitle(prefix)}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {fields
-                      .filter((field) => field.input)
-                      .map((field) => (
-                        <CustomInputField
-                          key={field.field}
-                          field={field.field}
-                          label={field.label}
-                          require={field.require}
-                          value={contactInfo[field.field] || ""}
-                          onChange={(v) => handleContactChange(field.field, v)}
-                          placeholder={field.placeholder}
-                          type={field.type}
-                        />
-                      ))}
-                  </div>
+            {/* Primary Contact - Owner/Authorized Person */}
+            <div>
+              <h3 className="font-semibold text-base mb-4 flex items-center gap-2 text-gray-900">
+                <Users className="h-5 w-5 text-primary" />
+                Owner / Authorized Person
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {contactFields
+                  .filter((field) => field.input)
+                  .map((field) => (
+                    <CustomInputField
+                      key={field.field}
+                      field={field.field}
+                      label={field.label}
+                      require={field.require}
+                      value={contactInfo[field.field] || ""}
+                      onChange={(v) => handleContactChange(field.field, v)}
+                      placeholder={field.placeholder}
+                      type={field.type}
+                    />
+                  ))}
+              </div>
+            </div>
+
+            {additionalContacts.length > 0 && <Separator className="my-6" />}
+
+            {/* Additional Contacts */}
+            {additionalContacts.map((contact, index) => (
+              <div
+                key={contact.id}
+                className="relative rounded-lg border border-gray-200 bg-gray-50 p-4"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveContact(index)}
+                  className="absolute top-3 right-3 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <h4 className="text-sm font-medium text-gray-900 mb-4">
+                  Additional Contact Person {index + 1}
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  {contactFields
+                    .filter((field) => field.input)
+                    .map((field) => (
+                      <CustomInputField
+                        key={`${field.field}-${contact.id}`}
+                        field={`${field.field}-${contact.id}`}
+                        label={field.label}
+                        value={contact[field.field] || ""}
+                        onChange={(value) =>
+                          handleAdditionalContactChange(index, field.field, value)
+                        }
+                        placeholder={field.placeholder}
+                        type={field.type}
+                      />
+                    ))}
                 </div>
-              </React.Fragment>
+
+                {/* Document Upload for Contact */}
+                <Separator className="my-4" />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                    <Upload className="h-4 w-4 text-primary" />
+                    Supporting Document (ID Proof)
+                  </label>
+                  <CustomInputField
+                    field={`contact-document-${contact.id}`}
+                    label=""
+                    type="file"
+                    value={contact.document ?? null}
+                    onChange={(fileOrNull: File | null) =>
+                      handleContactDocumentChange(index, fileOrNull)
+                    }
+                  />
+                  {contact.document && (
+                    <p className="text-xs text-gray-600 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                      {contact.document.name}
+                    </p>
+                  )}
+                </div>
+              </div>
             ))}
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleAddContact}
+              className="w-full border-dashed hover:border-solid"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Another Contact Person
+            </Button>
           </div>
         );
 
@@ -658,109 +789,80 @@ export default function SupplierKYCForm() {
   const ModalIcon = getModalIcon();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto">
-        <div className="space-y-6">
-          {validationErrors.length > 0 && (
-            <Card className="border-red-500 bg-red-50">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
-                  <div>
-                    <h3 className="font-semibold text-red-900 mb-2">
-                      Please fix the following errors:
-                    </h3>
-                    <ul className="list-disc list-inside text-sm text-red-800 space-y-1">
-                      {validationErrors.slice(0, 5).map((error, index) => (
-                        <li key={index}>{error}</li>
-                      ))}
-                      {validationErrors.length > 5 && (
-                        <li>... and {validationErrors.length - 5} more</li>
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 py-6 px-4 lg:px-8">
+      <div className="mx-auto space-y-6">
+        {/* Validation Errors */}
+       
 
-          {/* Basic Information */}
-          <Card className="shadow-xl border-t-4 border-t-primary">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Building2 className="h-6 w-6" />
-                Basic Information
-              </CardTitle>
-              <CardDescription>
-                Select company, division, branch and department
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              {/* Multi-selects using CustomInputField */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                <CustomInputField
-                  field="companyIds"
-                  label="Company"
-                  type="multi-select"
-                  options={companyOptions}
-                  value={selectedCompany}
-                  onChange={(vals: (number | string)[]) =>
-                    setSelectedCompany(vals.map((v) => Number(v)))
-                  }
-                  require
-                  disabled={hierarchyLoading || !!hierarchyError}
-                />
-                <CustomInputField
-                  field="divisionIds"
-                  label="Division"
-                  type="multi-select"
-                  options={divisionOptions}
-                  value={selectedDivision}
-                  onChange={(vals: (number | string)[]) =>
-                    setSelectedDivision(vals.map((v) => Number(v)))
-                  }
-                  require
-                  disabled={divisionOptions.length === 0}
-                />
-                <CustomInputField
-                  field="branchIds"
-                  label="Branch"
-                  type="multi-select"
-                  options={branchOptions}
-                  value={selectedBranch}
-                  onChange={(vals: (number | string)[]) =>
-                    setSelectedBranch(vals.map((v) => Number(v)))
-                  }
-                  require
-                  disabled={branchOptions.length === 0}
-                />
-                <CustomInputField
-                  field="departmentIds"
-                  label="Department"
-                  type="multi-select"
-                  options={departmentOptions}
-                  value={selectedDepartment}
-                  onChange={(vals: (string | number)[]) =>
-                    setSelectedDepartment(vals.map(String))
-                  }
-                  require
-                />
+        {/* Basic Information Card */}
+        <Card className="border-gray-200 shadow-sm">
+          <CardHeader className="border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Building2 className="h-4 w-4 text-primary" />
               </div>
+              <div>
+                <CardTitle className="text-xl">Basic Information</CardTitle>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Hierarchy Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <CustomInputField
+                field="com_sno"
+                label="Company"
+                type="multi-select"
+                options={companyOptions}
+                value={selectedCompany}
+                onChange={handleCompanyChange}
+                require
+                disabled={hierarchyLoading || !!hierarchyError}
+              />
+              <CustomInputField
+                field="divisionIds"
+                label="Division"
+                type="multi-select"
+                options={divisionOptions}
+                value={selectedDivision}
+                onChange={handleDivisionChange}
+                require
+                disabled={selectedCompany.length === 0 || divisionOptions.length === 0}
+              />
+              <CustomInputField
+                field="branchIds"
+                label="Branch"
+                type="multi-select"
+                options={branchOptions}
+                value={selectedBranch}
+                onChange={(vals: (number | string)[]) =>
+                  setSelectedBranch(vals.map((v) => Number(v)))
+                }
+                require
+                disabled={selectedDivision.length === 0 || branchOptions.length === 0}
+              />
+              <CustomInputField
+                field="departmentIds"
+                label="Department"
+                type="multi-select"
+                options={departmentOptions}
+                value={selectedDepartment}
+                onChange={(vals: (string | number)[]) =>
+                  setSelectedDepartment(vals.map(String))
+                }
+                require
+              />
+            </div>
 
-              {/* Existing basic fields (if any) */}
-              {basicInfoFields.some((f) => f.input) && (
+            {/* Additional Basic Fields */}
+            {basicInfoFields.some((f) => f.input) && (
+              <>
+                <Separator />
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {basicInfoFields
                     .filter((field) => field.input)
                     .map((field) => (
-                      <div
-                        key={field.field}
-                        className={
-                          field.type === "radio"
-                            ? "md:row-span-1 lg:row-span-1"
-                            : ""
-                        }
-                      >
+                      <div key={field.field}>
                         <CustomInputField
                           field={field.field}
                           label={field.label}
@@ -774,121 +876,97 @@ export default function SupplierKYCForm() {
                       </div>
                     ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Additional Sections */}
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <FileText className="h-6 w-6 text-primary" />
-              Additional Sections
-            </h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <SectionButton
-                title="Address Details"
-                description="Location and registered address information"
-                icon={MapPin}
-                section="address"
-              />
-              <SectionButton
-                title="Bank Account Details"
-                description="Banking information for transactions"
-                icon={CreditCard}
-                section="account"
-              />
-              <SectionButton
-                title="Contact Information"
-                description="Key personnel and their contact details"
-                icon={Users}
-                section="contacts"
-              />
-              <SectionButton
-                title="Document Upload"
-                description="Upload required certificates and documents"
-                icon={Upload}
-                section="documents"
-              />
-            </div>
+        {/* Additional Sections Grid */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Additional Information
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <SectionButton
+              title="Address Details"
+              description="Business locations and registered addresses"
+              icon={MapPin}
+              section="address"
+            />
+            <SectionButton
+              title="Bank Account"
+              description="Banking information and cancelled cheque for each account"
+              icon={CreditCard}
+              section="account"
+            />
+            <SectionButton
+              title="Contact Information"
+              description="Owner/authorized person and additional contacts with documents"
+              icon={Users}
+              section="contacts"
+            />
+            <SectionButton
+              title="Documents"
+              description="Upload certificates and required documents"
+              icon={Upload}
+              section="documents"
+            />
           </div>
-
-          {/* Submit Section */}
-          <Card className="shadow-xl border-t-4 border-t-green-500">
-            <CardContent className="p-6">
-              <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
-                <div className="text-center sm:text-left">
-                  <h3 className="text-xl font-semibold mb-1">
-                    Ready to Submit
-                  </h3>
-                  {submitError && (
-                    <p className="text-sm text-red-600 mt-2">{submitError}</p>
-                  )}
-                </div>
-                <div className="flex gap-3 w-full sm:w-auto">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => window.location.reload()}
-                    className="flex-1 sm:flex-none h-11"
-                    disabled={submitting}
-                  >
-                    Reset Form
-                  </Button>
-                  <Button
-                    onClick={handleSubmit}
-                    className="flex-1 sm:flex-none h-11 bg-green-600 hover:bg-green-700"
-                    disabled={submitting}
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Submit KYC
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
+
+        {/* Submit Section */}
+        <Card className="border-emerald-200 bg-emerald-50/50">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+              <div className="text-center md:text-left">
+                {submitError && (
+                  <p className="text-sm text-red-600 mt-2">{submitError}</p>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.location.reload()}
+                  className="sm:w-auto"
+                  disabled={submitting}
+                >
+                  Reset Form
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  className="bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Submit KYC
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Modal */}
-      <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-4xl overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <ModalIcon className="h-6 w-6 text-primary" />
-              {getModalTitle()}
-            </DialogTitle>
-          </DialogHeader>
-
-          <Separator className="my-2" />
-
-          <div className="overflow-y-auto max-h-[60vh] px-1">
-            {renderModalContent()}
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              onClick={handleCloseModal}
-              disabled={isSaving}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleModalSave} disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DynamicDialog
+        open={isModalOpen}
+        onOpenChange={handleCloseModal}
+        title={getModalTitle()}
+        Icon={ModalIcon}
+        children={renderModalContent()}
+        onSave={handleModalSave}
+        onCancel={handleCloseModal}
+      />
     </div>
   );
 }

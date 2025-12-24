@@ -18,7 +18,7 @@ export const store = configureStore({
     config: configReducer,
     decode: decodeReducer,
     hierarchyCompanyDetails: hierarchyCompanyDetailsSlice,
-    sidebarSlice: sidebarSlice,
+    sidebar: sidebarSlice,
   }
 })
 

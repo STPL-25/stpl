@@ -55,8 +55,10 @@ export const fetchSidebarData = createAsyncThunk<
       const response = await axios.get<ApiResponse<SidebarResponse>>(
         `${import.meta.env.VITE_API_URL}/api/user_approval/get_user_screens_and_permisssions/${ecno}`
       );
+
+      console.log(response.data.data,ecno);
       return response?.data?.data;
-    } catch (err) {
+    } catch (err) { 
       const error = err as AxiosError;
       return rejectWithValue(
         (error.response?.data as string) || "Failed to fetch sidebar data"

@@ -7,42 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import useFetch from '@/hooks/useFetchHook';
-
-interface KYCData {
-  kyc_basic_info_sno: number;
-  div_sno: number | null;
-  ecno: number | null;
-  brn_sno: number | null;
-  dept_sno: number | null;
-  com_sno: number | null;
-  company_name: string;
-  contact_person: string;
-  email: string;
-  mobile_number: string;
-  business_type: string;
-  is_gst_avail: string;
-  gst_no: string;
-  is_msme_avail: string;
-  msme_no: string | null;
-  pan_no: string;
-  created_by: string | null;
-  created_date: string;
-  modified_by: string | null;
-  modified_date: string | null;
-  is_active: string;
-  status: string;
-  supp_code: string | null;
-  old_supp_code: string | null;
-  kyc_address: string;
-  kyc_bank_info: string;
-  kyc_contact_details: string;
-  kyc_uploaded_doc: string;
-}
-
-interface APIResponse {
-  success: boolean;
-  data: KYCData[];
-}
+import { apiGetAllKycDatas } from '@/Services/Api';
+import {KYCData, APIResponse} from './types/KYCDataViewType';
 
 const KYCDataView = () => {
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
@@ -58,7 +24,7 @@ const KYCDataView = () => {
     setExpandedRows(newExpanded);
   };
 
-  const apiData = useFetch<APIResponse>(`${import.meta.env.VITE_API_URL}/api/kyc/get_all_kycs`);
+  const apiData = useFetch<APIResponse>(apiGetAllKycDatas);
 
   const parseJSONField = (jsonString: string) => {
     try {

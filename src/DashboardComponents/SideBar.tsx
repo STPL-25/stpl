@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppState } from "@/globalState/hooks/useAppState";
 import useFetch from "@/hooks/useFetchHook";
-
+import { apiFetchSidebarData } from "@/Services/Api";
 type IconComponent = React.ComponentType<{ className?: string }>;
 
 interface Screen {
@@ -28,32 +28,28 @@ const getIcon = (name: string | null): IconComponent => {
 };
 
 const Sidebar: React.FC = () => {
-  const {
-    sidebarOpen,
-    setSidebarOpen,
-    activeItem,
-    setActiveItem,
-    activeComponent,
-    setActiveComponent,
-    sidebarWidth,
-    setSidebarWidth,
-    isCollapsed,
-    toggleCollapse,
-    setHeaderComponentRender,
-    userData,
-    expandedItems,
-    setExpandedItems,
-  } = useAppState() as any;
+  const {sidebarOpen,setSidebarOpen, activeItem, setActiveItem, activeComponent,
+    setActiveComponent, sidebarWidth, setSidebarWidth, isCollapsed, toggleCollapse,
+    setHeaderComponentRender,userData,fetchSidebarData,sidebarData } = useAppState() as any;
+
   const ecno = userData[0]?.ecno || "";
 
-  const { data, loading, error } = useFetch<PermissionData>(
-    `${import.meta.env.VITE_API_URL}/api/user_approval/get_user_screens_and_permisssions/${ecno}`
-  );
 
+  const { data, loading, error } = useFetch<PermissionData>(`${apiFetchSidebarData}${ecno}` );
+useEffect(() => { 
+  if (ecno) {
+    fetchSidebarData(ecno);
+    console.log("Fetching sidebar data for ecno:",  fetchSidebarData(ecno));
+  }
+}, [ecno]);
+
+
+  // Uncomment to debug
+// console.log(fetchSidebarData(ecno))
   const [menu, setMenu] = useState<
     {
       id: string;
-      key: string; // unique key (screen_<id>)
+      key: string; 
       label: string;
       icon: IconComponent;
       screenId: number;
@@ -134,95 +130,143 @@ useEffect(() => {
   return (
     <>
       <TooltipProvider>
-        <div
-          className={`${
-            sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          } fixed lg:translate-x-0 lg:inset-0 z-50 bg-background/95 backdrop-blur-md border-r border-border/50 transform transition-all duration-300 ease-in-out h-screen flex flex-col shadow-xl lg:shadow-sm`}
-          style={{ width: isCollapsed ? "80px" : `${sidebarWidth}px` }}
-        >
-          {/* Header */}
-          <div className="p-4  bg-background/50 backdrop-blur-sm">
-          {/* border-b border-border/50 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={toggleCollapse}
-                      className="hidden lg:flex h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
-                    >
-                      <LucideIcons.Menu className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{isCollapsed ? "Expand sidebar" : "Collapse sidebar"}</TooltipContent>
-                </Tooltip>
+      <div
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r bg-background/120 backdrop-blur-xl shadow-lg transition-transform duration-300 lg:translate-x-0
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+        style={{ width: isCollapsed ? "80px" : `${sidebarWidth}px` }}
+      >
+        {/* Brand / Collapse */}
+        <div className="flex items-center justify-between px-4 py-3 border-b/60">
+          <div className="flex items-center gap-3">
+            {!isCollapsed && (
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-md">
+                  ST
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    Space Textiles
+                  </span>
+                  <span className="text-xs text-muted-foreground/70">
+                    ERP Console
+                  </span>
+                </div>
+              </div>
+            )}
 
+            <Tooltip>
+              <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  onClick={() => setSidebarOpen?.(false)}
-                  className="lg:hidden h-8 w-8 p-0 hover:bg-muted/50 transition-colors"
+                  size="icon"
+                  onClick={toggleCollapse}
+                  className="hidden lg:inline-flex h-8 w-8"
                 >
-                  <LucideIcons.X className="h-4 w-4" />
+                  <LucideIcons.PanelLeftOpen
+                    className={`h-4 w-4 transition-transform ${
+                      isCollapsed ? "rotate-180" : ""
+                    }`}
+                  />
                 </Button>
-              </div>
-            </div>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {isCollapsed ? "Expand" : "Collapse"}
+              </TooltipContent>
+            </Tooltip>
           </div>
 
-          {/* Navigation */}
-          <ScrollArea className="flex-1 p-4">
-            <nav className="space-y-2">
-              {loading && <div className="p-2 text-sm">Loading...</div>}
-              {error && <div className="p-2 text-sm text-destructive">Failed to load menu</div>}
-              {menu.map((item) => (
-                <Tooltip key={item.key}>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={activeItem === item.key ? "secondary" : "ghost"}
-                      className={`w-full h-12 transition-all duration-200 hover:bg-muted/50 ${
-                        isCollapsed ? "px-0 justify-center" : "justify-start px-3"
-                      } ${activeItem === item.key ? "bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200/50" : ""}`}
-                      onClick={() => handleClick(item)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`p-2 rounded-lg transition-all duration-200 ${
-                            activeItem === item.key ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-md" : "bg-muted/70 hover:bg-muted"
-                          }`}
-                        >
-                          <item.icon className="h-4 w-4" />
-                        </div>
-                        {!isCollapsed && <span className="font-medium text-sm">{item.label}</span>}
-                      </div>
-                    </Button>
-                  </TooltipTrigger>
-                  {isCollapsed && (
-                    <TooltipContent side="right" className="font-medium">
-                      {item.label}
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              ))}
-            </nav>
-          </ScrollArea>
+          {/* Mobile close */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen?.(false)}
+            className="lg:hidden h-8 w-8"
+          >
+            <LucideIcons.X className="h-4 w-4" />
+          </Button>
+        </div>
 
-          {/* Resize Handle */}
-          {!isCollapsed && (
-            <div
-              className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-blue-500/50 transition-colors duration-200 group"
-              onMouseDown={handleMouseDown}
-            >
-              <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-3 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-l-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-sm" />
+        {/* Navigation */}
+        <ScrollArea className="flex-1 px-3 py-4">
+          {loading && (
+            <div className="px-2 py-1 text-xs text-muted-foreground">
+              Loading menu…
             </div>
           )}
-        </div>
-      </TooltipProvider>
+          {error && (
+            <div className="px-2 py-1 text-xs text-destructive">
+              Failed to load menu
+            </div>
+          )}
+
+          <nav className="space-y-1">
+            {menu.map((item) => (
+              <Tooltip key={item.key}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => handleClick(item)}
+                    className={`group flex w-full items-center rounded-xl px-2 py-2 text-sm transition-all
+                    ${
+                      activeItem === item.key
+                        ? "bg-gradient-to-r from-blue-600/90 to-purple-600 text-white shadow-sm"
+                        : "text-muted-foreground hover:bg-muted/60"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-9 w-9 items-center justify-center rounded-lg border transition-all
+                      ${
+                        activeItem === item.key
+                          ? "border-white/20 bg-white/10"
+                          : "border-border/60 bg-background"
+                      }`}
+                    >
+                      <item.icon
+                        className={`h-4 w-4 ${
+                          activeItem === item.key
+                            ? "text-white"
+                            : "text-muted-foreground group-hover:text-foreground"
+                        }`}
+                      />
+                    </div>
+
+                    {!isCollapsed && (
+                      <span className="ml-3 truncate text-sm font-medium">
+                        {item.label}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                {isCollapsed && (
+                  <TooltipContent side="right">{item.label}</TooltipContent>
+                )}
+              </Tooltip>
+            ))}
+          </nav>
+        </ScrollArea>
+
+        {/* Resize handle */}
+        {!isCollapsed && (
+          <div
+            className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-blue-500/40"
+            onMouseDown={handleMouseDown}
+          >
+            <div className="absolute right-0 top-1/2 h-10 w-3 -translate-y-1/2 rounded-l-full bg-gradient-to-b from-blue-500 to-purple-600 opacity-0 shadow-sm transition-opacity group-hover:opacity-100" />
+          </div>
+        )}
+      </div>
+
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40  backdrop-blur-sm lg:hidden"
+          onClick={() => setSidebarOpen?.(false)}
+        />
+      )}
+    </TooltipProvider>
 
       {/* Mobile Overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0  backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
     </>
   );

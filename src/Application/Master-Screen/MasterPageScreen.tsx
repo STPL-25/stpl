@@ -6,6 +6,7 @@ import ItemGridCard from "@/CustomComponent/MasterComponents/ItemGridCard";
 import { useAppState } from "@/globalState/hooks/useAppState";
 import { useMasterDataFields } from "@/FieldDatas/useMasterDataFields";
 import useFetch from "@/hooks/useFetchHook";
+import { apiFetchCommonMaster } from "@/Services/Api";
 import { masterItems } from "@/FieldDatas/Data";
 
 interface MasterItem {
@@ -22,7 +23,6 @@ interface Category {
 }
 
 const MasterScreen: React.FC = () => {
-  const apiUrl = import.meta.env.VITE_API_URL as string;
   const { selectedMaster, setCurrentScreen,setSelectedMaster } = useAppState() as any;
 
   const masterDataResult = useMasterDataFields() as any;
@@ -30,7 +30,7 @@ const MasterScreen: React.FC = () => {
   const headerData = selectedMaster ? (fields[selectedMaster] || []) : [];
 
   const { data: datas, loading, error } = useFetch(
-    selectedMaster ? `${apiUrl}/api/common_master/${selectedMaster}` : ''
+    selectedMaster ? `${apiFetchCommonMaster}${selectedMaster}` : ''
   ) as { data?: any; loading: boolean; error: Error | null };
 
   if (!selectedMaster) {

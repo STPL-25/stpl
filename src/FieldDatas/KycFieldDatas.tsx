@@ -1,6 +1,8 @@
 import { useMemo } from "react";
+import { useAppState } from "@/globalState/hooks/useAppState";
+import {  Option, Company, Division, Branch } from "@/Application/Kyc-Screen/types/KycEntryType";
 
-export type FieldInputType = "text" | "number" | "select" | "date" | "email" | "textarea"| "file"|'radio';
+export type FieldInputType = "text" | "number" | "select" | "date" | "email" | "textarea"| "file"|'radio' | 'multi-select';
 
 export interface OptionType {
   value: string | number;
@@ -18,14 +20,134 @@ export interface FieldType {
   options?: OptionType[] | any[];
 }
 
+
+export const useComDivBranchDeptFields = (
+  selectedCompany: number[],
+  selectedDivision: number[]
+) => {
+  const { data: hierarchyData, loading: hierarchyLoading, error: hierarchyError } = useAppState();
+
+  // Generate Company Options
+  const companyOptions: Option[] = useMemo(() => {
+    if (!hierarchyData?.companies) return [];
+    return hierarchyData.companies.map((company: Company) => ({
+      label: company.com_name,
+      value: company.com_sno,
+    }));
+  }, [hierarchyData]);
+
+  // Generate Division Options (filtered by selected companies)
+  const divisionOptions: Option[] = useMemo(() => {
+    if (!hierarchyData?.divisions || selectedCompany.length === 0) return [];
+    return hierarchyData.divisions
+      .filter((division: Division) => 
+        selectedCompany.includes(division.div_sno) // Filter by selected company
+      )
+      .map((division: Division) => ({
+        label: division.div_name,
+        value: division.div_sno,
+      }));
+  }, [hierarchyData, selectedCompany]);
+
+  // Generate Branch Options (filtered by selected divisions)
+  const branchOptions: Option[] = useMemo(() => {
+    if (!hierarchyData?.branches || selectedDivision.length === 0) return [];
+    return hierarchyData.branches
+      .filter((branch: Branch) => 
+        selectedDivision.includes(branch.brn_sno) // Filter by selected division
+      )
+      .map((branch: Branch) => ({
+        label: branch.brn_name,
+        value: branch.brn_sno,
+      }));
+  }, [hierarchyData, selectedDivision]);
+
+  // Static Department Options
+  const departmentOptions: Option[] = useMemo(
+    () => [
+      { value: "dept-1", label: "Procurement" },
+      { value: "dept-2", label: "Finance" },
+      { value: "dept-3", label: "Operations" },
+    ],
+    []
+  );
+
+  // Generate Field Configuration with Options
+  const fields: FieldType[] = useMemo(
+    () => [
+      { 
+        field: "com_sno", 
+        label: "Company", 
+        require: true, 
+        type: "multi-select", 
+        placeholder: "Select companies",
+        input: true,
+        options: companyOptions,
+        view: true,
+        disabled: hierarchyLoading || !!hierarchyError
+      },
+      { 
+        field: "div_sno", 
+        label: "Division", 
+        require: true, 
+        type: "multi-select", 
+        placeholder: "Select divisions",
+        input: true,
+        options: divisionOptions,
+        view: true,
+        disabled: selectedCompany.length === 0 || divisionOptions.length === 0
+      },
+      { 
+        field: "brn_sno", 
+        label: "Branch", 
+        require: true, 
+        type: "multi-select", 
+        placeholder: "Select branches",
+        input: true,
+        options: branchOptions,
+        view: true,
+        disabled: selectedDivision.length === 0 || branchOptions.length === 0
+      },
+      { 
+        field: "dept_sno", 
+        label: "Department", 
+        require: true, 
+        type: "multi-select", 
+        placeholder: "Select departments",
+        input: true,
+        options: departmentOptions,
+        view: true,
+        disabled: false
+      },
+    ],
+    [
+      companyOptions, 
+      divisionOptions, 
+      branchOptions, 
+      departmentOptions,
+    
+    ]
+  );
+
+  return {
+    fields,
+    companyOptions,
+    divisionOptions,
+    branchOptions,
+    departmentOptions,
+   
+  };
+};
 // Hook for Basic Information fields
 export const useBasicInfoFields = (basicInfo: any): FieldType[] => {
+  
   // Extract specific properties to track changes
   const isGstAvail = basicInfo?.is_gst_avail==='true';
   const isMsmeAvail = basicInfo?.is_msme_avail==='true';
 
   return useMemo<FieldType[]>(
     () => [
+     
       { 
         field: "is_gst_avail", 
         label: "Gst Available", 
@@ -102,8 +224,8 @@ export const useDocumentFields = (): FieldType[] => {
       { field: "msme_file", label: "MSME Certificate", require: false, type: "file",input:true,view:true },
       { field: "cancel_cheque_file", label: "Cancelled Cheque ", require: true, type: "file",input:true,view:true },
       { field: "auth_contact_file", label: "Owner ID Proof", require: false, type: "file",input:true,view:true },
-      { field: "auth_person_file", label: "Authorized Person ID", require: false, type: "file" ,input:true,view:true},
-      { field: "auth_accounts_file", label: "Authorized Accounts Person ID", require: false, type: "file" ,input:true,view:true},
+      // { field: "auth_person_file", label: "Authorized Person ID", require: false, type: "file" ,input:true,view:true},
+      // { field: "auth_accounts_file", label: "Authorized Accounts Person ID", require: false, type: "file" ,input:true,view:true},
     ],
     []
   );
@@ -129,18 +251,18 @@ export const useBankFields = (): FieldType[] => {
 export const useContactFields = (): FieldType[] => {
   return useMemo<FieldType[]>(
     () => [
-      { field: "ownername", label: "Name", require: true, type: "text", placeholder: "Owner name",input:true,view:true },
-      { field: "ownerposition", label: "Position", require: false, type: "text", placeholder: "Managing Director / Owner",input:true,view:true },
-      { field: "ownermobile", label: "Mobile", require: true, type: "text", placeholder: "+91 98765 43210",input:true,view:true },
-      { field: "owneremail", label: "Email", require: true, type: "email", placeholder: "owner@example.com",input:true,view:true },
-      { field: "boname", label: "Name", require: true, type: "text", placeholder: "Operations manager" ,input:true,view:true},
-      { field: "boposition", label: "Position", require: true, type: "text", placeholder: "Operations Head",input:true,view:true },
-      { field: "bomobile", label: "Mobile", require: true, type: "text", placeholder: "+91 98765 43210",input:true,view:true },
-      { field: "boemail", label: "Email", require: true, type: "email", placeholder: "operations@example.com",input:true,view:true },
-      { field: "accname", label: "Name", require: true, type: "text", placeholder: "Accounts manager" ,input:true,view:true},
-      { field: "accposition", label: "Position", require: true, type: "text", placeholder: "Accounts Head",input:true,view:true },
-      { field: "accmobile", label: "Mobile", require: true, type: "text", placeholder: "+91 98765 43210" ,input:true,view:true},
-      { field: "accemail", label: "Email", require: true, type: "email", placeholder: "accounts@example.com" ,input:true,view:true},
+      { field: "ownername", label: "Name", require: true, type: "text", placeholder: "Name",input:true,view:true },
+      { field: "ownerposition", label: "Position", require: false, type: "text", placeholder: "Position",input:true,view:true },
+      { field: "ownermobile", label: "Mobile", require: true, type: "text", placeholder: "Mobile",input:true,view:true },
+      { field: "owneremail", label: "Email", require: true, type: "email", placeholder: "Email",input:true,view:true },
+      // { field: "boname", label: "Name", require: true, type: "text", placeholder: "Operations manager" ,input:true,view:true},
+      // { field: "boposition", label: "Position", require: true, type: "text", placeholder: "Operations Head",input:true,view:true },
+      // { field: "bomobile", label: "Mobile", require: true, type: "text", placeholder: "+91 98765 43210",input:true,view:true },
+      // { field: "boemail", label: "Email", require: true, type: "email", placeholder: "operations@example.com",input:true,view:true },
+      // { field: "accname", label: "Name", require: true, type: "text", placeholder: "Accounts manager" ,input:true,view:true},
+      // { field: "accposition", label: "Position", require: true, type: "text", placeholder: "Accounts Head",input:true,view:true },
+      // { field: "accmobile", label: "Mobile", require: true, type: "text", placeholder: "+91 98765 43210" ,input:true,view:true},
+      // { field: "accemail", label: "Email", require: true, type: "email", placeholder: "accounts@example.com" ,input:true,view:true},
     ],
     []
   );
