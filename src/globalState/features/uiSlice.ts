@@ -8,6 +8,7 @@ export interface UIState {
   expandedItems: Record<string, boolean>
   activeItem: string
   activeComponent: string
+  activeGroupId: string
   sidebarWidth: number
   isCollapsed: boolean
   headerComponentRender: string
@@ -29,7 +30,8 @@ const initialState: UIState = {
   sidebarWidth: 280,
   isCollapsed: false,
   headerComponentRender: '',
-  isFullscreen: false
+  isFullscreen: false,
+  activeGroupId: ''
 }
 
 /**
@@ -50,6 +52,9 @@ const uiSlice = createSlice({
     },
     setActiveComponent: (state, action: PayloadAction<string>) => {
       state.activeComponent = action.payload
+    },
+    setActiveGroupId: (state, action: PayloadAction<string>) => {
+      state.activeGroupId = action.payload
     },
     setSidebarWidth: (state, action: PayloadAction<number>) => {
       state.sidebarWidth = action.payload
@@ -78,7 +83,8 @@ export const {
   setSidebarWidth,
   toggleCollapse,
   setHeaderComponentRender,
-  setIsFullscreen
+  setIsFullscreen,
+  setActiveGroupId
 } = uiSlice.actions
 
 /**
@@ -93,5 +99,6 @@ export const selectIsCollapsed = (state: RootState) => state.ui.isCollapsed
 export const selectHeaderComponentRender = (state: RootState) =>
   state.ui.headerComponentRender
 export const selectIsFullscreen = (state: RootState) => state.ui.isFullscreen
+export const selectActiveGroupId = (state: RootState) => state.ui.activeGroupId
 
 export default uiSlice.reducer

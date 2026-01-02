@@ -1,7 +1,7 @@
 import { lazy, LazyExoticComponent, ComponentType } from "react";
 import { Home, X, LogOut, BarChart3, Users, ShoppingCart, Calendar, Settings,
   ChevronDown, ChevronRight, Menu, Building2, GitBranch, Network, FileText, ShieldCheck,
-  Package, Globe, Search, Bell, User, DollarSign, Eye, Plus, Edit, Trash, } from "lucide-react";
+  Package, Globe, Search, Bell, User, DollarSign, Eye, Plus, Edit, Trash,IdCard } from "lucide-react";
 // import PurchaseRequisitionPage from "@/Application/PR/PurchaseRequisitionPage";
 // Lazy-loaded components
  export const MasterComponents = lazy(() => import(".././Application/Master-Screen/MasterPageScreen"));
@@ -14,6 +14,7 @@ import { Home, X, LogOut, BarChart3, Users, ShoppingCart, Calendar, Settings,
  export const RoleApproval = lazy(() => import("../Application/RoleApproval/UserRoleApprovalScreen"));
  export const KYCDataView = lazy(() => import("../Application/Kyc-Screen/KYCDataView"));
  export const PurchaseRequisitionPage = lazy(() => import("../Application/PR/PurchaseRequisitionPage"));
+ export const ApprovalWorkflowPage = lazy(() => import("../Application/RoleApproval/ApprovalWorkflowManager"));
 // Interface for the component map
 export interface SectionComponentsMap {
   [key: string]: LazyExoticComponent<ComponentType<any>>;
@@ -30,5 +31,6 @@ export const sectionComponents: SectionComponentsMap = {
 //   BudgetRequest,
 KYCEntry,
 KYCDataView,
-PurchaseRequisitionPage
+PurchaseRequisitionPage,
+ApprovalWorkflowPage
 };

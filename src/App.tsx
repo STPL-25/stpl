@@ -23,6 +23,8 @@ interface StoredUserToken {
 
 function App() {
   const { userData, decryptData } = useAppState();
+
+  console.log(userData)
   const cryptoSecret = import.meta.env.VITE_CRYPTO_SECRET as string;
 
   useEffect(() => {

@@ -3,16 +3,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import {  Building2, MapPin, FileText, CreditCard, Users, Upload,CheckCircle2,
-  AlertCircle, X, Loader2,  ChevronRight,  Plus,} from "lucide-react";
+import { Building2, MapPin, FileText, CreditCard, Users, Upload, CheckCircle2, X, Loader2, ChevronRight, Plus, Star } from "lucide-react";
 import { CustomInputField } from "@/CustomComponent/InputComponents/CustomInputField";
-import {  useBasicInfoFields, useAddressFields,  useBankFields,  useContactFields,  useDocumentFields,useComDivBranchDeptFields } from "@/FieldDatas/KycFieldDatas";
-import { useAppState } from "../../globalState/hooks/useAppState";
+import { useBasicInfoFields, useAddressFields, useBankFields, useContactFields, useDocumentFields, useComDivBranchDeptFields } from "@/FieldDatas/KycFieldDatas";
 import usePost from "@/hooks/usePostHook";
 import { toast } from "sonner";
 import { apiPostKycData } from "@/Services/Api";
 import DynamicDialog from "@/CustomComponent/InputComponents/CustomModelComponent";
-import {DynamicFormData, AdditionalAddress, BankDetail, ContactDetail, Option, Branch, Division, Company} from "./types/KycEntryType";
+import { DynamicFormData, AdditionalAddress, BankDetail, ContactDetail } from "./types/KycEntryType";
+import { useAppState } from "@/globalState/hooks/useAppState";
+// Extended types with isPrimary flag
+interface AddressWithPrimary extends AdditionalAddress {
+  id: string;
+  isPrimary: boolean;
+}
+
+interface BankDetailWithPrimary extends BankDetail {
+  isPrimary: boolean;
+}
+
+interface ContactDetailWithPrimary extends ContactDetail {
+  isPrimary: boolean;
+}
 
 export default function SupplierKYCForm() {
   const addressFields = useAddressFields();
@@ -20,8 +32,9 @@ export default function SupplierKYCForm() {
   const bankFields = useBankFields();
   const contactFields = useContactFields();
   const { postData, loading: submitting, error: submitError } = usePost();
-  const { data: hierarchyData, loading: hierarchyLoading, error: hierarchyError } = useAppState();
 
+  const { userData } = useAppState();
+  console.log(userData)
   // Initialize state objects
   const initialAddressInfo = useMemo(() => {
     const obj: DynamicFormData = {};
@@ -55,181 +68,203 @@ export default function SupplierKYCForm() {
     return obj;
   }, [documentFields]);
 
+  // State declarations
   const [basicInfo, setBasicInfo] = useState<DynamicFormData>({});
-  const [addressInfo, setAddressInfo] = useState<DynamicFormData>(initialAddressInfo);
-  const [bankInfo, setBankInfo] = useState<DynamicFormData>(initialBankInfo);
-  const [contactInfo, setContactInfo] = useState<DynamicFormData>(initialContactInfo);
   const [documentInfo, setDocumentInfo] = useState<DynamicFormData>(initialDocumentInfo);
-  const [additionalAddresses, setAdditionalAddresses] = useState<AdditionalAddress[]>([]);
-  const [additionalBankDetails, setAdditionalBankDetails] = useState<BankDetail[]>([]);
-  const [additionalContacts, setAdditionalContacts] = useState<ContactDetail[]>([]);
-  // NEW: State for primary bank cancel cheque
-  const [primaryBankCancelCheque, setPrimaryBankCancelCheque] = useState<File | null>(null);
+  
+  // **REFACTORED: Single state arrays with primary flags**
+  const [addresses, setAddresses] = useState<AddressWithPrimary[]>([
+    {
+      id: `address_primary_${Date.now()}`,
+      isPrimary: true,
+      ...initialAddressInfo
+    }
+  ]);
+
+  const [bankDetails, setBankDetails] = useState<BankDetailWithPrimary[]>([
+    {
+      id: `bank_primary_${Date.now()}`,
+      isPrimary: true,
+      cancelChequeFile: null,
+      ...initialBankInfo
+    }
+  ]);
+
+  const [contacts, setContacts] = useState<ContactDetailWithPrimary[]>([
+    {
+      id: `contact_primary_${Date.now()}`,
+      isPrimary: true,
+      document: null,
+      ...initialContactInfo
+    }
+  ]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState<string>("");
+  
+  // Hierarchy state
   const [selectedCompany, setSelectedCompany] = useState<number[]>([]);
   const [selectedDivision, setSelectedDivision] = useState<number[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<number[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string[]>([]);
- const {  
-    companyOptions,
-    divisionOptions,
-    branchOptions,
-    departmentOptions,
-   
-  } = useComDivBranchDeptFields(selectedCompany, selectedDivision);
-  // Options
-  // const companyOptions: Option[] = useMemo(() => {
-  //   if (!hierarchyData?.companies) return [];
-  //   return hierarchyData.companies.map((company: Company) => ({
-  //     label: company.com_name,
-  //     value: company.com_sno,
-  //   }));
-  // }, [hierarchyData]);
 
-  // const divisionOptions: Option[] = useMemo(() => {
-  //   if (!hierarchyData?.divisions || selectedCompany.length === 0) return [];
-  //   return hierarchyData.divisions.map((division: Division) => ({
-  //     label: division.div_name,
-  //     value: division.div_sno,
-  //   }));
-  // }, [hierarchyData, selectedCompany]);
-
-  // const branchOptions: Option[] = useMemo(() => {
-  //   if (!hierarchyData?.branches || selectedDivision.length === 0) return [];
-  //   return hierarchyData.branches.map((branch: Branch) => ({
-  //     label: branch.brn_name,
-  //     value: branch.brn_sno,
-  //   }));
-  // }, [hierarchyData, selectedDivision]);
-
-  // const departmentOptions: Option[] = useMemo(
-  //   () => [
-  //     { value: "dept-1", label: "Procurement" },
-  //     { value: "dept-2", label: "Finance" },
-  //     { value: "dept-3", label: "Operations" },
-  //   ],
-  //   []
-  // );
+  const { fields: hierarchyFields, loading: hierarchyLoading, error: hierarchyError } = useComDivBranchDeptFields(selectedCompany, selectedDivision);
 
   const basicInfoFields = useBasicInfoFields(basicInfo);
 
-  // Handlers
-  const handleChange =
-    (setState: React.Dispatch<React.SetStateAction<DynamicFormData>>) =>
+  // General change handlers
+  const handleChange = (setState: React.Dispatch<React.SetStateAction<DynamicFormData>>) =>
     (field: string, value: any) => {
       setState((prev) => ({ ...prev, [field]: value }));
     };
 
   const handleBasicChange = handleChange(setBasicInfo);
-  const handleAddressChange = handleChange(setAddressInfo);
-  const handleBankChange = handleChange(setBankInfo);
-  const handleContactChange = handleChange(setContactInfo);
   const handleDocumentChange = handleChange(setDocumentInfo);
 
-  const handleCompanyChange = (vals: (number | string)[]) => {
-    const newCompanyIds = vals.map((v) => Number(v));
-    setSelectedCompany(newCompanyIds);
-
-    if (newCompanyIds.length === 0) {
-      setSelectedDivision([]);
-      setSelectedBranch([]);
+  const handleHierarchyChange = (field: string, vals: (number | string)[]) => {
+    switch (field) {
+      case "com_sno":
+        setSelectedCompany(vals.map(v => Number(v)));
+        setSelectedDivision([]);
+        setSelectedBranch([]);
+        break;
+      case "div_sno":
+        setSelectedDivision(vals.map(v => Number(v)));
+        setSelectedBranch([]);
+        break;
+      case "brn_sno":
+        setSelectedBranch(vals.map(v => Number(v)));
+        break;
+      case "dept_sno":
+        setSelectedDepartment(vals.map(String));
+        break;
     }
   };
 
-  const handleDivisionChange = (vals: (number | string)[]) => {
-    const newDivisionIds = vals.map((v) => Number(v));
-    setSelectedDivision(newDivisionIds);
-
-    if (newDivisionIds.length === 0) {
-      setSelectedBranch([]);
-    }
+  const getHierarchyValue = (field: string) => {
+    const valueMap: Record<string, any> = {
+      "com_sno": selectedCompany,
+      "div_sno": selectedDivision,
+      "brn_sno": selectedBranch,
+      "dept_sno": selectedDepartment,
+    };
+    return valueMap[field] || [];
   };
 
-  // Address handlers
+  // **REFACTORED: Address handlers**
   const handleAddAddress = () => {
-    const newAddress: AdditionalAddress = {};
-    addressFields.forEach((field) => {
-      newAddress[field.field] = "";
-    });
-    setAdditionalAddresses((prev) => [...prev, newAddress]);
+    const newAddress: AddressWithPrimary = {
+      id: `address_${Date.now()}`,
+      isPrimary: false,
+      ...initialAddressInfo
+    };
+    setAddresses((prev) => [...prev, newAddress]);
   };
 
   const handleRemoveAddress = (index: number) => {
-    setAdditionalAddresses((prev) => prev.filter((_, i) => i !== index));
+    if (addresses.length === 1) {
+      toast.error("At least one address is required");
+      return;
+    }
+    if (addresses[index].isPrimary) {
+      toast.error("Cannot remove primary address");
+      return;
+    }
+    setAddresses((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAdditionalAddressChange = (
-    index: number,
-    field: string,
-    value: string
-  ) => {
-    setAdditionalAddresses((prev) => {
+  const handleAddressChange = (index: number, field: string, value: string) => {
+    setAddresses((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
   };
 
-  // Bank details handlers
-  const handleAddBankDetail = () => {
-    const newBankDetail: BankDetail = { 
-      id: `bank_${Date.now()}`,
-      cancelChequeFile: null // Initialize with null
-    };
-    bankFields.filter((field) => field.input).forEach((field) => {
-      newBankDetail[field.field] = "";
+  const handleSetPrimaryAddress = (index: number) => {
+    setAddresses((prev) => {
+      return prev.map((addr, i) => ({
+        ...addr,
+        isPrimary: i === index
+      }));
     });
-    setAdditionalBankDetails((prev) => [...prev, newBankDetail]);
+    toast.success("Primary address updated");
+  };
+
+  // **REFACTORED: Bank account handlers**
+  const handleAddBankDetail = () => {
+    const newBankDetail: BankDetailWithPrimary = {
+      id: `bank_${Date.now()}`,
+      isPrimary: false,
+      cancelChequeFile: null,
+      ...initialBankInfo
+    };
+    setBankDetails((prev) => [...prev, newBankDetail]);
   };
 
   const handleRemoveBankDetail = (index: number) => {
-    setAdditionalBankDetails((prev) => prev.filter((_, i) => i !== index));
+    if (bankDetails.length === 1) {
+      toast.error("At least one bank account is required");
+      return;
+    }
+    if (bankDetails[index].isPrimary) {
+      toast.error("Cannot remove primary bank account");
+      return;
+    }
+    setBankDetails((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAdditionalBankChange = (
-    index: number,
-    field: string,
-    value: string
-  ) => {
-    setAdditionalBankDetails((prev) => {
+  const handleBankDetailChange = (index: number, field: string, value: string) => {
+    setBankDetails((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
   };
 
-  // NEW: Handler for bank cancel cheque file
   const handleBankCancelChequeChange = (index: number, file: File | null) => {
-    setAdditionalBankDetails((prev) => {
+    setBankDetails((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], cancelChequeFile: file };
       return updated;
     });
   };
 
-  // Contact handlers
-  const handleAddContact = () => {
-    const newContact: ContactDetail = { 
-      id: `contact_${Date.now()}`, 
-      document: null 
-    };
-    contactFields.filter((field) => field.input).forEach((field) => {
-      newContact[field.field] = "";
+  const handleSetPrimaryBank = (index: number) => {
+    setBankDetails((prev) => {
+      return prev.map((bank, i) => ({
+        ...bank,
+        isPrimary: i === index
+      }));
     });
-    setAdditionalContacts((prev) => [...prev, newContact]);
+    toast.success("Primary bank account updated");
+  };
+
+  // **REFACTORED: Contact handlers**
+  const handleAddContact = () => {
+    const newContact: ContactDetailWithPrimary = {
+      id: `contact_${Date.now()}`,
+      isPrimary: false,
+      document: null,
+      ...initialContactInfo
+    };
+    setContacts((prev) => [...prev, newContact]);
   };
 
   const handleRemoveContact = (index: number) => {
-    setAdditionalContacts((prev) => prev.filter((_, i) => i !== index));
+    if (contacts.length === 1) {
+      toast.error("At least one contact is required");
+      return;
+    }
+    if (contacts[index].isPrimary) {
+      toast.error("Cannot remove primary contact");
+      return;
+    }
+    setContacts((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleAdditionalContactChange = (
-    index: number,
-    field: string,
-    value: any
-  ) => {
-    setAdditionalContacts((prev) => {
+  const handleContactChange = (index: number, field: string, value: any) => {
+    setContacts((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
@@ -237,11 +272,21 @@ export default function SupplierKYCForm() {
   };
 
   const handleContactDocumentChange = (index: number, file: File | null) => {
-    setAdditionalContacts((prev) => {
+    setContacts((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], document: file };
       return updated;
     });
+  };
+
+  const handleSetPrimaryContact = (index: number) => {
+    setContacts((prev) => {
+      return prev.map((contact, i) => ({
+        ...contact,
+        isPrimary: i === index
+      }));
+    });
+    toast.success("Primary contact updated");
   };
 
   const handleOpenModal = (section: string) => {
@@ -259,6 +304,37 @@ export default function SupplierKYCForm() {
     handleCloseModal();
   };
 
+  const resetForm = () => {
+    // setBasicInfo({});
+    // setDocumentInfo(initialDocumentInfo);
+    
+    // // **REFACTORED: Reset to single primary items**
+    // setAddresses([{
+    //   id: `address_primary_${Date.now()}`,
+    //   isPrimary: true,
+    //   ...initialAddressInfo
+    // }]);
+
+    // setBankDetails([{
+    //   id: `bank_primary_${Date.now()}`,
+    //   isPrimary: true,
+    //   cancelChequeFile: null,
+    //   ...initialBankInfo
+    // }]);
+
+    // setContacts([{
+    //   id: `contact_primary_${Date.now()}`,
+    //   isPrimary: true,
+    //   document: null,
+    //   ...initialContactInfo
+    // }]);
+    
+    // setSelectedCompany([]);
+    // setSelectedDivision([]);
+    // setSelectedBranch([]);
+    // setSelectedDepartment([]);
+  };
+
   const handleSubmit = async () => {
     try {
       const formData = new FormData();
@@ -267,80 +343,49 @@ export default function SupplierKYCForm() {
       formData.append("divisionIds", JSON.stringify(selectedDivision));
       formData.append("branchIds", JSON.stringify(selectedBranch));
       formData.append("departmentIds", JSON.stringify(selectedDepartment));
-
+      formData.append("created_by", userData[0]?.ecno ||"");
       Object.entries(basicInfo).forEach(([key, value]) => {
         if (value !== null && value !== undefined) {
           formData.append(key, value);
         }
       });
 
-      Object.entries(addressInfo).forEach(([key, value]) => {
-        if (value) {
-          formData.append(key, value);
+      // **REFACTORED: Addresses - Send all as array with isPrimary flag**
+      const addressesData = addresses.map(({ id, ...address }) => ({
+        id,
+        ...address
+      }));
+      formData.append("addresses", JSON.stringify(addressesData));
+
+      // **REFACTORED: Bank Details - Send all as array with isPrimary flag**
+      const bankDetailsData = bankDetails.map(({ id, cancelChequeFile, ...bank }) => ({
+        id,
+        ...bank,
+        hasCancelCheque: !!cancelChequeFile,
+      }));
+      formData.append("bankDetails", JSON.stringify(bankDetailsData));
+
+      bankDetails.forEach((bank, index) => {
+        if (bank.cancelChequeFile) {
+          formData.append(`bankCancelCheque_${index}`, bank.cancelChequeFile);
         }
       });
 
-      if (additionalAddresses.length > 0) {
-        formData.append("additionalAddresses", JSON.stringify(additionalAddresses));
-      }
+      // **REFACTORED: Contacts - Send all as array with isPrimary flag**
+      const contactsData = contacts.map(({ id, document, ...contact }) => ({
+        id,
+        ...contact,
+        hasDocument: !!document,
+      }));
+      formData.append("contacts", JSON.stringify(contactsData));
 
-      // ===== BANK INFORMATION WITH CANCEL CHEQUE FILES =====
-      // Primary Bank Details
-      Object.entries(bankInfo).forEach(([key, value]) => {
-        if (value) {
-          formData.append(key, value);
+      contacts.forEach((contact, index) => {
+        if (contact.document) {
+          formData.append(`contactDocument_${index}`, contact.document);
         }
       });
 
-      // Primary Bank Cancel Cheque File
-      if (primaryBankCancelCheque) {
-        formData.append("primaryBankCancelCheque", primaryBankCancelCheque);
-      }
-
-      // Additional Bank Details with Cancel Cheques
-      if (additionalBankDetails.length > 0) {
-        const bankDetailsData = additionalBankDetails.map(
-          ({ id, cancelChequeFile, ...bank }) => ({
-            id,
-            ...bank,
-            hasCancelCheque: !!cancelChequeFile,
-          })
-        );
-        formData.append("additionalBankDetails", JSON.stringify(bankDetailsData));
-
-        // Append each cancel cheque file with unique identifier
-        additionalBankDetails.forEach((bank, index) => {
-          if (bank.cancelChequeFile) {
-            formData.append(`bankCancelCheque_${index}`, bank.cancelChequeFile);
-          }
-        });
-      }
-
-      // ===== PRIMARY CONTACT (OWNER/AUTHORIZED PERSON) =====
-      Object.entries(contactInfo).forEach(([key, value]) => {
-        if (value) {
-          formData.append(key, value);
-        }
-      });
-
-      // ===== ADDITIONAL CONTACTS WITH DOCUMENTS =====
-      if (additionalContacts.length > 0) {
-        const contactsData = additionalContacts.map(({ id, document, ...contact }) => ({
-          id,
-          ...contact,
-          hasDocument: !!document,
-        }));
-        formData.append("additionalContacts", JSON.stringify(contactsData));
-
-        // Append each contact document with unique identifier
-        additionalContacts.forEach((contact, index) => {
-          if (contact.document) {
-            formData.append(`contactDocument_${index}`, contact.document);
-          }
-        });
-      }
-
-      // ===== GENERAL DOCUMENTS =====
+      // General Documents
       Object.entries(documentInfo).forEach(([key, value]) => {
         if (value instanceof File) {
           formData.append(key, value);
@@ -355,21 +400,7 @@ export default function SupplierKYCForm() {
 
       if (response) {
         toast.success("KYC submitted successfully!");
-
-        // Reset all states
-        setBasicInfo({});
-        setAddressInfo(initialAddressInfo);
-        setBankInfo(initialBankInfo);
-        setContactInfo(initialContactInfo);
-        setDocumentInfo(initialDocumentInfo);
-        setAdditionalAddresses([]);
-        setAdditionalBankDetails([]);
-        setAdditionalContacts([]);
-        setPrimaryBankCancelCheque(null); 
-        setSelectedCompany([]);
-        setSelectedDivision([]);
-        setSelectedBranch([]);
-        setSelectedDepartment([]);
+        resetForm();
       }
     } catch (error: any) {
       console.error("KYC submission error:", error);
@@ -380,24 +411,28 @@ export default function SupplierKYCForm() {
   const getCompletionStatus = (section: string) => {
     switch (section) {
       case "address":
-        return addressFields.some((field) => field.require && addressInfo[field.field]) ||
-          additionalAddresses.length > 0;
+        return addresses.some((addr) => 
+          addressFields.some((field) => field.require && addr[field.field])
+        );
       case "documents":
         return documentFields.some((field) => documentInfo[field.field]);
       case "account":
-        return (bankFields.some((field) => field.require && bankInfo[field.field]) && 
-          primaryBankCancelCheque !== null) ||
-          additionalBankDetails.length > 0;
+        return bankDetails.some((bank) => 
+          bankFields.some((field) => field.require && bank[field.field]) && 
+          bank.cancelChequeFile !== null
+        );
       case "contacts":
-        return contactFields.some((field) => field.require && contactInfo[field.field]) ||
-          additionalContacts.length > 0;
+        return contacts.some((contact) => 
+          contactFields.some((field) => field.require && contact[field.field])
+        );
       default:
         return false;
     }
   };
 
-  const SectionButton = ({ title,  description,  icon: Icon,  section, }: {
-    title: string;  description?: string;  icon: any;   section: string;  }) => {
+  const SectionButton = ({ title, description, icon: Icon, section }: {
+    title: string; description?: string; icon: any; section: string;
+  }) => {
     const isComplete = getCompletionStatus(section);
 
     return (
@@ -438,55 +473,68 @@ export default function SupplierKYCForm() {
       case "address":
         return (
           <div className="space-y-6">
-            {/* Primary Address */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {addressFields
-                .filter((field) => field.input)
-                .map((field) => (
-                  <CustomInputField
-                    key={field.field}
-                    field={field.field}
-                    label={field.label}
-                    require={field.require}
-                    value={addressInfo[field.field] || ""}
-                    onChange={(v) => handleAddressChange(field.field, v)}
-                    placeholder={field.placeholder}
-                    type={field.type}
-                  />
-                ))}
-            </div>
-
-            {additionalAddresses.length > 0 && <Separator className="my-6" />}
-
-            {/* Additional Addresses */}
-            {additionalAddresses.map((addr, index) => (
+            {addresses.map((address, index) => (
               <div
-                key={index}
-                className="relative rounded-lg border border-gray-200 bg-gray-50 p-4"
+                key={address.id}
+                className={`relative rounded-lg border p-4 ${
+                  address.isPrimary 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-200 bg-gray-50'
+                }`}
               >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveAddress(index)}
-                  className="absolute top-3 right-3 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <h4 className="text-sm font-medium text-gray-900 mb-4">
-                  Additional Location {index + 1}
-                </h4>
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-base flex items-center gap-2 text-gray-900">
+                    <MapPin className="h-5 w-5 text-primary" />
+                    {address.isPrimary ? 'Primary Address' : `Address ${index + 1}`}
+                    {address.isPrimary && (
+                      <Badge className="ml-2 bg-amber-500 hover:bg-amber-600">
+                        <Star className="h-3 w-3 mr-1" />
+                        Primary
+                      </Badge>
+                    )}
+                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    {!address.isPrimary && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSetPrimaryAddress(index)}
+                        className="text-xs"
+                      >
+                        <Star className="h-3 w-3 mr-1" />
+                        Set as Primary
+                      </Button>
+                    )}
+                    {!address.isPrimary && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveAddress(index)}
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {addressFields
                     .filter((field) => field.input)
                     .map((field) => (
                       <CustomInputField
-                        key={`${field.field}-${index}`}
-                        field={`${field.field}-${index}`}
+                        key={`${field.field}-${address.id}`}
+                        field={`${field.field}-${address.id}`}
                         label={field.label}
-                        value={addr[field.field] || ""}
+                        require={field.require && address.isPrimary}
+                        value={address[field.field] || ""}
                         onChange={(value) =>
-                          handleAdditionalAddressChange(index, field.field, value)
+                          handleAddressChange(index, field.field, value)
                         }
                         placeholder={field.placeholder}
                         type={field.type}
@@ -503,7 +551,7 @@ export default function SupplierKYCForm() {
               className="w-full border-dashed hover:border-solid"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Another Location
+              Add Another Address
             </Button>
           </div>
         );
@@ -511,76 +559,56 @@ export default function SupplierKYCForm() {
       case "account":
         return (
           <div className="space-y-6">
-            {/* Primary Bank Details */}
-            <div>
-              <h3 className="font-semibold text-base mb-4 flex items-center gap-2 text-gray-900">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Primary Bank Account
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {bankFields
-                  .filter((field) => field.input)
-                  .map((field) => (
-                    <CustomInputField
-                      key={field.field}
-                      field={field.field}
-                      label={field.label}
-                      require={field.require}
-                      value={bankInfo[field.field] || ""}
-                      onChange={(v) => handleBankChange(field.field, v)}
-                      placeholder={field.placeholder}
-                      type={field.type}
-                    />
-                  ))}
-              </div>
-              
-              {/* Primary Bank Cancel Cheque Upload */}
-              <Separator className="my-4" />
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                  <Upload className="h-4 w-4 text-primary" />
-                  Cancelled Cheque Leaf <span className="text-red-500">*</span>
-                </label>
-                <CustomInputField
-                  field="primary-bank-cancel-cheque"
-                  label=""
-                  type="file"
-                  value={primaryBankCancelCheque}
-                  onChange={(fileOrNull: File | null) =>
-                    setPrimaryBankCancelCheque(fileOrNull)
-                  }
-                />
-                {primaryBankCancelCheque && (
-                  <p className="text-xs text-gray-600 flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                    {primaryBankCancelCheque.name}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {additionalBankDetails.length > 0 && <Separator className="my-6" />}
-
-            {/* Additional Bank Details with Cancel Cheque */}
-            {additionalBankDetails.map((bank, index) => (
+            {bankDetails.map((bank, index) => (
               <div
                 key={bank.id}
-                className="relative rounded-lg border border-gray-200 bg-gray-50 p-4"
+                className={`relative rounded-lg border p-4 ${
+                  bank.isPrimary 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-200 bg-gray-50'
+                }`}
               >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveBankDetail(index)}
-                  className="absolute top-3 right-3 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <h4 className="text-sm font-medium text-gray-900 mb-4">
-                  Bank Account {index + 2}
-                </h4>
-                
-                {/* Bank Fields */}
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-base flex items-center gap-2 text-gray-900">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    {bank.isPrimary ? 'Primary Bank Account' : `Bank Account ${index + 1}`}
+                    {bank.isPrimary && (
+                      <Badge className="ml-2 bg-amber-500 hover:bg-amber-600">
+                        <Star className="h-3 w-3 mr-1" />
+                        Primary
+                      </Badge>
+                    )}
+                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    {!bank.isPrimary && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSetPrimaryBank(index)}
+                        className="text-xs"
+                      >
+                        <Star className="h-3 w-3 mr-1" />
+                        Set as Primary
+                      </Button>
+                    )}
+                    {!bank.isPrimary && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveBankDetail(index)}
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {bankFields
                     .filter((field) => field.input)
@@ -589,9 +617,10 @@ export default function SupplierKYCForm() {
                         key={`${field.field}-${bank.id}`}
                         field={`${field.field}-${bank.id}`}
                         label={field.label}
+                        require={field.require && bank.isPrimary}
                         value={bank[field.field] || ""}
                         onChange={(value) =>
-                          handleAdditionalBankChange(index, field.field, value)
+                          handleBankDetailChange(index, field.field, value)
                         }
                         placeholder={field.placeholder}
                         type={field.type}
@@ -599,8 +628,9 @@ export default function SupplierKYCForm() {
                     ))}
                 </div>
 
-                {/* Cancel Cheque Upload for THIS Additional Bank */}
                 <Separator className="my-4" />
+                
+                {/* Cancel Cheque */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
                     <Upload className="h-4 w-4 text-primary" />
@@ -640,51 +670,57 @@ export default function SupplierKYCForm() {
       case "contacts":
         return (
           <div className="space-y-6">
-            {/* Primary Contact - Owner/Authorized Person */}
-            <div>
-              <h3 className="font-semibold text-base mb-4 flex items-center gap-2 text-gray-900">
-                <Users className="h-5 w-5 text-primary" />
-                Owner / Authorized Person
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {contactFields
-                  .filter((field) => field.input)
-                  .map((field) => (
-                    <CustomInputField
-                      key={field.field}
-                      field={field.field}
-                      label={field.label}
-                      require={field.require}
-                      value={contactInfo[field.field] || ""}
-                      onChange={(v) => handleContactChange(field.field, v)}
-                      placeholder={field.placeholder}
-                      type={field.type}
-                    />
-                  ))}
-              </div>
-            </div>
-
-            {additionalContacts.length > 0 && <Separator className="my-6" />}
-
-            {/* Additional Contacts */}
-            {additionalContacts.map((contact, index) => (
+            {contacts.map((contact, index) => (
               <div
                 key={contact.id}
-                className="relative rounded-lg border border-gray-200 bg-gray-50 p-4"
+                className={`relative rounded-lg border p-4 ${
+                  contact.isPrimary 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-gray-200 bg-gray-50'
+                }`}
               >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveContact(index)}
-                  className="absolute top-3 right-3 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-                <h4 className="text-sm font-medium text-gray-900 mb-4">
-                  Additional Contact Person {index + 1}
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-base flex items-center gap-2 text-gray-900">
+                    <Users className="h-5 w-5 text-primary" />
+                    {contact.isPrimary ? 'Primary Contact Person' : `Contact Person ${index + 1}`}
+                    {contact.isPrimary && (
+                      <Badge className="ml-2 bg-amber-500 hover:bg-amber-600">
+                        <Star className="h-3 w-3 mr-1" />
+                        Primary
+                      </Badge>
+                    )}
+                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    {!contact.isPrimary && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSetPrimaryContact(index)}
+                        className="text-xs"
+                      >
+                        <Star className="h-3 w-3 mr-1" />
+                        Set as Primary
+                      </Button>
+                    )}
+                    {!contact.isPrimary && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveContact(index)}
+                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {contactFields
                     .filter((field) => field.input)
                     .map((field) => (
@@ -692,9 +728,10 @@ export default function SupplierKYCForm() {
                         key={`${field.field}-${contact.id}`}
                         field={`${field.field}-${contact.id}`}
                         label={field.label}
+                        require={field.require && contact.isPrimary}
                         value={contact[field.field] || ""}
                         onChange={(value) =>
-                          handleAdditionalContactChange(index, field.field, value)
+                          handleContactChange(index, field.field, value)
                         }
                         placeholder={field.placeholder}
                         type={field.type}
@@ -702,8 +739,9 @@ export default function SupplierKYCForm() {
                     ))}
                 </div>
 
-                {/* Document Upload for Contact */}
                 <Separator className="my-4" />
+                
+                {/* Document */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
                     <Upload className="h-4 w-4 text-primary" />
@@ -791,8 +829,11 @@ export default function SupplierKYCForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-50 py-6 px-4 lg:px-8">
       <div className="mx-auto space-y-6">
-        {/* Validation Errors */}
-       
+        {hierarchyError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <p className="text-sm">Failed to load hierarchy data: {hierarchyError}</p>
+          </div>
+        )}
 
         {/* Basic Information Card */}
         <Card className="border-gray-200 shadow-sm">
@@ -801,60 +842,29 @@ export default function SupplierKYCForm() {
               <div className="p-2 rounded-lg bg-primary/10">
                 <Building2 className="h-4 w-4 text-primary" />
               </div>
-              <div>
-                <CardTitle className="text-xl">Basic Information</CardTitle>
-              </div>
+              <CardTitle className="text-xl">Basic Information</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Hierarchy Selection */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <CustomInputField
-                field="com_sno"
-                label="Company"
-                type="multi-select"
-                options={companyOptions}
-                value={selectedCompany}
-                onChange={handleCompanyChange}
-                require
-                disabled={hierarchyLoading || !!hierarchyError}
-              />
-              <CustomInputField
-                field="divisionIds"
-                label="Division"
-                type="multi-select"
-                options={divisionOptions}
-                value={selectedDivision}
-                onChange={handleDivisionChange}
-                require
-                disabled={selectedCompany.length === 0 || divisionOptions.length === 0}
-              />
-              <CustomInputField
-                field="branchIds"
-                label="Branch"
-                type="multi-select"
-                options={branchOptions}
-                value={selectedBranch}
-                onChange={(vals: (number | string)[]) =>
-                  setSelectedBranch(vals.map((v) => Number(v)))
-                }
-                require
-                disabled={selectedDivision.length === 0 || branchOptions.length === 0}
-              />
-              <CustomInputField
-                field="departmentIds"
-                label="Department"
-                type="multi-select"
-                options={departmentOptions}
-                value={selectedDepartment}
-                onChange={(vals: (string | number)[]) =>
-                  setSelectedDepartment(vals.map(String))
-                }
-                require
-              />
+              {hierarchyFields.map((field) => (
+                <CustomInputField
+                  key={field.field}
+                  field={field.field}
+                  label={field.label}
+                  type={field.type}
+                  options={field.options}
+                  value={getHierarchyValue(field.field)}
+                  onChange={(vals: (number | string)[]) =>
+                    handleHierarchyChange(field.field, vals)
+                  }
+                  require={field.require}
+                  disabled={field.disabled}
+                  placeholder={field.placeholder}
+                />
+              ))}
             </div>
 
-            {/* Additional Basic Fields */}
             {basicInfoFields.some((f) => f.input) && (
               <>
                 <Separator />
@@ -916,7 +926,7 @@ export default function SupplierKYCForm() {
         </div>
 
         {/* Submit Section */}
-        <Card className="border-emerald-200 bg-emerald-50/50">
+        <Card className="">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
               <div className="text-center md:text-left">
@@ -928,7 +938,7 @@ export default function SupplierKYCForm() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => window.location.reload()}
+                  onClick={resetForm}
                   className="sm:w-auto"
                   disabled={submitting}
                 >

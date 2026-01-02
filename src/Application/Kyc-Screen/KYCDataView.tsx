@@ -209,82 +209,43 @@ const KYCDataView = () => {
                         </TabsList>
 
                         {/* Basic Info Tab */}
-                        <TabsContent value="basic" className="mt-6">
+                          <TabsContent value="basic" className="mt-6">
                           <div className="rounded-lg border border-slate-200 overflow-hidden bg-white">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gradient-to-r from-slate-50 to-blue-50">
-                                  <TableHead className="font-semibold w-1/3">Field</TableHead>
-                                  <TableHead className="font-semibold">Value</TableHead>
+                                  <TableHead className="font-semibold">Company Name</TableHead>
+                                  <TableHead className="font-semibold">Business Type</TableHead>
+                                  <TableHead className="font-semibold">Contact Person</TableHead>
+                                  <TableHead className="font-semibold">Area</TableHead>
+                                  <TableHead className="font-semibold">City</TableHead>
+                                  <TableHead className="font-semibold">Taluk</TableHead>
+                                  <TableHead className="font-semibold">State</TableHead>
+                                  <TableHead className="font-semibold">Pincode</TableHead>
+                                  <TableHead className="font-semibold">Actions</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
-                              
-                                <TableRow className="hover:bg-blue-50/50">
-                                  <TableCell className="font-medium">Company Name</TableCell>
-                                  <TableCell className="capitalize">{supplier.company_name}</TableCell>
-                                </TableRow>
-                                <TableRow className="hover:bg-blue-50/50">
-                                  <TableCell className="font-medium">Business Type</TableCell>
-                                  <TableCell className="capitalize">{supplier.business_type}</TableCell>
-                                </TableRow>
-                                <TableRow className="hover:bg-blue-50/50">
-                                  <TableCell className="font-medium">Contact Person</TableCell>
-                                  <TableCell className="capitalize">{supplier.contact_person}</TableCell>
-                                </TableRow>
-                                <TableRow className="hover:bg-blue-50/50">
-                                  <TableCell className="font-medium">Email</TableCell>
-                                  <TableCell>{supplier.email}</TableCell>
-                                </TableRow>
-                                <TableRow className="hover:bg-blue-50/50">
-                                  <TableCell className="font-medium">Mobile Number</TableCell>
-                                  <TableCell>{supplier.mobile_number}</TableCell>
-                                </TableRow>
-                                <TableRow className="hover:bg-blue-50/50">
-                                  <TableCell className="font-medium">PAN Number</TableCell>
-                                  <TableCell>{supplier.pan_no}</TableCell>
-                                </TableRow>
-                              
-                                {supplier.is_gst_avail === 'Y' && (
-                                  <TableRow className="hover:bg-blue-50/50">
-                                    <TableCell className="font-medium">GST Number</TableCell>
-                                    <TableCell>{supplier.gst_no}</TableCell>
-                                  </TableRow>
-                                )}
-                               
-                                {supplier.is_msme_avail === 'Y' && supplier.msme_no && (
-                                  <TableRow className="hover:bg-blue-50/50">
-                                    <TableCell className="font-medium">MSME Number</TableCell>
-                                    <TableCell>{supplier.msme_no}</TableCell>
-                                  </TableRow>
-                                )}
-                                {supplier.supp_code && (
-                                  <TableRow className="hover:bg-blue-50/50">
-                                    <TableCell className="font-medium">Supplier Code</TableCell>
-                                    <TableCell>{supplier.supp_code}</TableCell>
-                                  </TableRow>
-                                )}
-                                {supplier.old_supp_code && (
-                                  <TableRow className="hover:bg-blue-50/50">
-                                    <TableCell className="font-medium">Old Supplier Code</TableCell>
-                                    <TableCell>{supplier.old_supp_code}</TableCell>
-                                  </TableRow>
-                                )}
-                                <TableRow className="hover:bg-blue-50/50">
-                                  <TableCell className="font-medium">Status</TableCell>
-                                  <TableCell>
-                                    <Badge variant={supplier.status === 'Y' ? 'default' : 'secondary'}>
-                                      {supplier.status === 'Y' ? 'Active' : 'Inactive'}
-                                    </Badge>
-                                  </TableCell>
-                                </TableRow>
-                                                   
-                               
                                 
+                                  <TableRow  className="hover:bg-blue-50/50">
+                                  
+                                    <TableCell>{supplier.company_name}</TableCell>
+                                    <TableCell>{supplier.business_type}</TableCell>
+                                    <TableCell>{supplier.contact_person}</TableCell>
+                                    <TableCell>{supplier.email}</TableCell>
+                                    <TableCell>{supplier.mobile_number}</TableCell>
+                                    <TableCell>{supplier.pan_no}</TableCell>
+                                    <TableCell>{supplier.gst_no}</TableCell>
+                                    <TableCell>{supplier.msme_no}</TableCell>
+                                    
+                                  </TableRow>
+                               
                               </TableBody>
                             </Table>
                           </div>
                         </TabsContent>
+
+                     
 
                         {/* Address Tab */}
                         <TabsContent value="address" className="mt-6">

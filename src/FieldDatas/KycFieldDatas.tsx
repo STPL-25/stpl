@@ -30,6 +30,7 @@ export const useComDivBranchDeptFields = (
   // Generate Company Options
   const companyOptions: Option[] = useMemo(() => {
     if (!hierarchyData?.companies) return [];
+    console.log(hierarchyData.companies)
     return hierarchyData.companies.map((company: Company) => ({
       label: company.com_name,
       value: company.com_sno,
@@ -37,37 +38,46 @@ export const useComDivBranchDeptFields = (
   }, [hierarchyData]);
 
   // Generate Division Options (filtered by selected companies)
-  const divisionOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.divisions || selectedCompany.length === 0) return [];
-    return hierarchyData.divisions
-      .filter((division: Division) => 
-        selectedCompany.includes(division.div_sno) // Filter by selected company
-      )
-      .map((division: Division) => ({
+ const divisionOptions: Option[] = useMemo(() => {
+  if (!hierarchyData?.companies || selectedCompany.length === 0) return [];
+  
+  return hierarchyData.companies
+    .filter((company: Company) => 
+      selectedCompany.includes(company.com_sno) // Filter by selected company
+    )
+    .flatMap((company: Company) => 
+      company.divisions.map((division) => ({
         label: division.div_name,
         value: division.div_sno,
-      }));
-  }, [hierarchyData, selectedCompany]);
+      }))
+    );
+}, [hierarchyData, selectedCompany]);
+
 
   // Generate Branch Options (filtered by selected divisions)
-  const branchOptions: Option[] = useMemo(() => {
-    if (!hierarchyData?.branches || selectedDivision.length === 0) return [];
-    return hierarchyData.branches
-      .filter((branch: Branch) => 
-        selectedDivision.includes(branch.brn_sno) // Filter by selected division
-      )
-      .map((branch: Branch) => ({
+ const branchOptions: Option[] = useMemo(() => {
+  if (!hierarchyData?.companies || selectedDivision.length === 0) return [];
+  
+  return hierarchyData.companies
+    .flatMap((company: Company) => company.divisions)
+    .filter((division) => 
+      selectedDivision.includes(division.div_sno) // Filter by selected division
+    )
+    .flatMap((division) => 
+      division.branches.map((branch) => ({
         label: branch.brn_name,
         value: branch.brn_sno,
-      }));
-  }, [hierarchyData, selectedDivision]);
+      }))
+    );
+}, [hierarchyData, selectedDivision]);
+
 
   // Static Department Options
   const departmentOptions: Option[] = useMemo(
     () => [
-      { value: "dept-1", label: "Procurement" },
-      { value: "dept-2", label: "Finance" },
-      { value: "dept-3", label: "Operations" },
+      { value: "1", label: "Procurement" },
+      { value: "2", label: "Finance" },
+      { value: "3", label: "Operations" },
     ],
     []
   );
@@ -209,7 +219,7 @@ export const useAddressFields = (): FieldType[] => {
       { field: "city", label: "City", require: true, type: "text", placeholder: "City name",input:true,view:true },
       { field: "state", label: "State", require: true, type: "text", placeholder: "State name",input:true,view:true },
       { field: "pincode", label: "Pincode", require: true, type: "text", placeholder: "600001",input:true,view:true },
-       { field: "location_link", label: "Location Link", require: false, type: "text", placeholder: "https://maps.google.com/...",input:true,view:true },
+      { field: "location_link", label: "Location Link", require: false, type: "text", placeholder: "https://maps.google.com/...",input:true,view:true },
     ],
     []
   );
@@ -222,8 +232,8 @@ export const useDocumentFields = (): FieldType[] => {
       { field: "gst_file", label: "GST Certificate", require: false, type: "file",input:true,view:true },
       { field: "pan_file", label: "PAN Card", require: true, type: "file",input:true,view:true },
       { field: "msme_file", label: "MSME Certificate", require: false, type: "file",input:true,view:true },
-      { field: "cancel_cheque_file", label: "Cancelled Cheque ", require: true, type: "file",input:true,view:true },
-      { field: "auth_contact_file", label: "Owner ID Proof", require: false, type: "file",input:true,view:true },
+      // { field: "cancel_cheque_file", label: "Cancelled Cheque ", require: true, type: "file",input:true,view:true },
+      // { field: "auth_contact_file", label: "Owner ID Proof", require: false, type: "file",input:true,view:true },
       // { field: "auth_person_file", label: "Authorized Person ID", require: false, type: "file" ,input:true,view:true},
       // { field: "auth_accounts_file", label: "Authorized Accounts Person ID", require: false, type: "file" ,input:true,view:true},
     ],

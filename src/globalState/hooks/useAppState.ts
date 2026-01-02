@@ -20,7 +20,9 @@ import {
   selectSidebarWidth,
   selectIsCollapsed,
   selectHeaderComponentRender,
-  selectIsFullscreen
+  selectIsFullscreen,
+  selectActiveGroupId,
+  setActiveGroupId
 } from "../features/uiSlice"
 
 // ================= FORM =================
@@ -71,6 +73,7 @@ import {
   selectCompanyHierarchyError
 } from "../features/hierarchyCompanyDetailsSlice"
 import {fetchSidebarData,clearSidebarData,selectSidebarData,selectSidebarLoading,selectSidebarError} from "../features/fetchSidebarDataSlice"
+import { set } from "lodash"
 // ================= TYPED HOOKS =================
 export const useAppDispatch = () => useDispatch<AppDispatch>()
 export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
@@ -88,7 +91,8 @@ export const useAppState = () => {
     sidebarWidth: useAppSelector(selectSidebarWidth),
     isCollapsed: useAppSelector(selectIsCollapsed),
     headerComponentRender: useAppSelector(selectHeaderComponentRender),
-    isFullscreen: useAppSelector(selectIsFullscreen)
+    isFullscreen: useAppSelector(selectIsFullscreen),
+    activeGroupId: useAppSelector(selectActiveGroupId)
   }
 
   // ---------- FORM ----------
@@ -157,6 +161,8 @@ export const useAppState = () => {
     toggleCollapse: () => dispatch(toggleCollapse()),
     setHeaderComponentRender: (component: string) =>
       dispatch(setHeaderComponentRender(component)),
+    setActiveGroupId: (groupId: string) =>
+      dispatch(setActiveGroupId(groupId)),
     setIsFullscreen: (fullscreen: boolean) =>
       dispatch(setIsFullscreen(fullscreen)),
 

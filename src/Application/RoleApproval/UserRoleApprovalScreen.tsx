@@ -42,7 +42,7 @@ interface PermissionDetail {
   permission_description: string;
 }
 
-type Permissions = Record<string, Record<number, boolean>>; // screen_name: { permission_id: boolean }
+type Permissions = Record<string, Record<number, boolean>>; 
 
 export default function PermissionManager() {
   const [selectedUser, setSelectedUser] = useState<string>("");
@@ -194,6 +194,7 @@ export default function PermissionManager() {
   // Clean up invalid divisions when companies change
   useEffect(() => {
     // when user manually changes companies, drop invalid divisions
+    console.log(getAvailableDivisions())
     if (selectedCompanies.length > 0) {
       const validDivisionIds = getAvailableDivisions().map((d) => d.div_sno);
       setSelectedDivisions((prev) => prev.filter((id) => validDivisionIds.includes(id)));
@@ -201,9 +202,10 @@ export default function PermissionManager() {
       // don't clear divisions automatically if existingPermFetch has divisions (we want existing user selections shown)
       if (!existingPermFetch?.divisions) setSelectedDivisions([]);
     }
+    
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCompanies]);
-
+console.log(selectedDivisions)
   // Clean up invalid branches when divisions change
   useEffect(() => {
     if (selectedDivisions.length > 0) {
@@ -245,7 +247,7 @@ export default function PermissionManager() {
     const companiesToUse = selectedCompanies.length > 0
       ? selectedCompanies
       : existingPermFetch?.companies ?? [];
-
+   console.log(companiesToUse)
     if (companiesToUse.length === 0 || !hierarchyFetchData?.data) return [];
 
     const divisions: Division[] = [];
