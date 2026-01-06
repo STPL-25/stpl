@@ -146,7 +146,7 @@ const Sidebar: React.FC = () => {
                   <div className="relative">
                     <Avatar className="h-9 w-9 rounded-lg ring-2 ring-slate-100 dark:ring-slate-700">
                       <AvatarFallback className="rounded-lg bg-gradient-to-r from-blue-600/90 to-purple-200 text-xs font-extrabold">
-                       <img src="" alt="" />
+                      SA
                       </AvatarFallback>
                     </Avatar>
                   </div>
@@ -174,11 +174,6 @@ const Sidebar: React.FC = () => {
                         }`}
                     />
                   </Button>
-
-
-
-
-
                 </TooltipTrigger>
                 <TooltipContent side="right" className="text-xs">
                   {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}

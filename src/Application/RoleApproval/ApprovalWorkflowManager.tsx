@@ -62,7 +62,7 @@ const ApprovalWorkflowPage: React.FC = () => {
 
   // Edit workflow
   const handleEditWorkflow = (id: number) => {
-    const workflow = workflows.find(w => w.workflow_id === id);
+    const workflow = workflows?.find(w => w.workflow_id === id);
     if (workflow) {
       setSelectedWorkflow(workflow);
       setIsWorkflowDialogOpen(true);
@@ -851,7 +851,7 @@ const StagesView: React.FC<{
           {stages.map((stage) => {
             const stageApprovers = approvers.filter((a) => a.stage_id === stage.stage_id);
             const isExpanded = expandedStages.has(stage.stage_id);
-            const workflowType = workflowTypes.find(wt => wt.workflow_types_id === stage.workflow_types_id);
+            const workflowType = workflowTypes?.find(wt => wt.workflow_types_id === stage.workflow_types_id);
 
             return (
               <Card key={stage.stage_id} className="overflow-hidden">
@@ -1363,8 +1363,8 @@ const ConditionsTable: React.FC<{
               </TableRow>
             ) : (
               conditions.map((condition) => {
-                const stage = stages.find(s => s.stage_id === condition.stage_id);
-                const workflowType = workflowTypes.find(wt => wt.workflow_types_id === condition.workflow_types_id);
+                const stage = stages?.find(s => s.stage_id === condition.stage_id);
+                const workflowType = workflowTypes?.find(wt => wt.workflow_types_id === condition.workflow_types_id);
                 
                 return (
                   <TableRow key={condition.condition_id}>
