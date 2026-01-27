@@ -49,7 +49,7 @@ const AddNewModal: React.FC<AddNewModalProps> = ({ isOpen, onClose, headers, onS
       setFormData(newFormData);
       setErrors({});
     }
-  }, [isOpen, headers, initialData, setFormData]);
+  }, [isOpen, headers, initialData]);
 
   const handleInputChange = (field: string, value: any) => {
     const updatedFormData = {

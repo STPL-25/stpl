@@ -1,4 +1,4 @@
-import React, { useState ,JSX} from "react";
+import React, { useState ,JSX,useEffect} from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -27,8 +27,18 @@ export default function SignIn(): JSX.Element {
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
 
   const { postData } = usePost();
-  const { decryptData, clearDecodeError, userData } = useAppState();
+  const { decryptData, clearDecodeError, userData,socket } = useAppState();
+useEffect(() => {
+  // Set up socket listener on component mount
+  socket.on("user_connected", (data: any) => {
+    console.log("Socket connected:", data);
+  });
 
+  // Cleanup listener on unmount
+  return () => {
+    socket.off("user_connected");
+  };
+}, []);
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -37,7 +47,6 @@ export default function SignIn(): JSX.Element {
   };
 
   console.log(userData);
-
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSigningIn(true);
@@ -45,8 +54,14 @@ export default function SignIn(): JSX.Element {
 
     try {
       const response = await postData(`${apiUrl}/api/secure/log_user`, { ...formData });
+        // socket.on("user_connected", (data:any)=>{
+        //   console.log("Socket connected:",data);
+        // });
+
 
       if (response?.success) {
+
+      
         toast.success(response?.message);
         localStorage.setItem("userToken", JSON.stringify(response.data));
 

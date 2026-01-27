@@ -3,18 +3,30 @@ import { ArrowLeft, Search,Download, Settings, Plus, ChevronLeft, ChevronRight, 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { CustomInputField } from "@/CustomComponent/InputComponents/CustomInputField";
 import AddNewModal from "./AddNewModal";
+import { useAppState } from "@/globalState/hooks/useAppState";
 /**
  * Types
  */
 type RowData = Record<string, any>;
 
+type Option = {
+  label: string;
+  value: string;
+};
+
+// Then update HeaderDef to use it
 type HeaderDef = {
   field: string;
   label: string;
-  input?: boolean; // whether this field appears in add/edit form
+  input?: boolean;
   view?: boolean;
+  type?: string;
+  require?: boolean;
+  options?: Option[]; // Use Option[] instead of tuple type
 };
+
 
 type DynamicTableProps = {
   headers?: HeaderDef[];
@@ -99,7 +111,7 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
   const [itemToDelete, setItemToDelete] = useState<RowData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
+   const { userData } = useAppState();
   // keep tableData in sync when parent passes new data
   useEffect(() => {
     setTableData(Array.isArray(data) ? data : []);
@@ -164,13 +176,14 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
     setIsLoading(true);
     try {
       if (master) {
+        formData.created_by=userData[0]?.ecno || "system";
         const resp = await apiPost(`${API_BASE}/api/common_master/${master}`, formData);
         if (resp.status >= 200 && resp.status < 300) {
           // if server returns full new dataset or created item, integrate it
           if (resp.data && Array.isArray(resp.data)) setTableData(resp.data);
           else if (resp.data) setTableData((p) => [...p, resp.data]);
         }
-        toast.success(resp?.message || "Item added");
+        toast.success(resp?.data[0]?.Message || resp?.message || "Item added");
       } else {
         // local-only fallback
         const created = { ...formData, id: Date.now() };
@@ -463,114 +476,253 @@ const DynamicTable: React.FC<DynamicTableProps> = ({
   };
 
   // Simple Add/Edit form modal
-  const TableModals: React.FC = () => {
-    // form state shared by add & edit
-    const [formState, setFormState] = useState<RowData>({});
+  // const TableModals: React.FC = () => {
+  //   // form state shared by add & edit
+  //   const [formState, setFormState] = useState<RowData>({});
 
-    useEffect(() => {
-      if (showEditModal && editingItem) setFormState({ ...editingItem });
-      if (showAddModal) setFormState({});
-    }, [showAddModal, showEditModal, editingItem]);
+  //   useEffect(() => {
+  //     if (showEditModal && editingItem) setFormState({ ...editingItem });
+  //     if (showAddModal) setFormState({});
+  //   }, [showAddModal, showEditModal, editingItem]);
 
-    const formHeaders = headers.filter((h) => h.input !== false); // default show inputs if input not explicitly false
+  //   const formHeaders = headers.filter((h) => h.input !== false); // default show inputs if input not explicitly false
 
-    return (
-      <>
-        {/* Add Modal */}
-        {showAddModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-5xl bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold">Add New</h4>
-                <Button variant="ghost" onClick={() => setShowAddModal(false)}>
-                  Close
-                </Button>
-              </div>
+  //   return (
+  //     <>
+  //       {/* Add Modal */}
+  //       {showAddModal && (
+  //         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  //           <div className="w-full max-w-5xl bg-white rounded-lg shadow p-6">
+  //             <div className="flex items-center justify-between mb-4">
+  //               <h4 className="text-lg font-semibold">Add New</h4>
+  //               <Button variant="ghost" onClick={() => setShowAddModal(false)}>
+  //                 Close
+  //               </Button>
+  //             </div>
         
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 {formHeaders.map((h) => (
-                  <div key={h.field}>
-                    <label className="block text-sm font-medium mb-1">{h.label}</label>
-                     <Input
-                       value={formState[h.field] ?? ""}
-                       onChange={(e) => setFormState((s) => ({ ...s, [h.field]: e.target.value }))}
-                    />
-                   </div>
-                 ))}
-               </div>
+  //              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  //                {formHeaders.map((h) => (
+  //                 <div key={h.field}>
+  //                   <CustomInputField field={h.field} label={h.label}  />
+  //                   <label className="block text-sm font-medium mb-1">{h.label}</label>
+  //                    <Input
+  //                      value={formState[h.field] ?? ""}
+  //                      onChange={(e) => setFormState((s) => ({ ...s, [h.field]: e.target.value }))}
+  //                   />
+  //                  </div>
+  //                ))}
+  //              </div>
 
-              <div className="mt-6 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={() => handleAddSave(formState)} disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+  //             <div className="mt-6 flex justify-end gap-2">
+  //               <Button variant="outline" onClick={() => setShowAddModal(false)}>
+  //                 Cancel
+  //               </Button>
+  //               <Button onClick={() => handleAddSave(formState)} disabled={isLoading}>
+  //                 {isLoading ? "Saving..." : "Save"}
+  //               </Button>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       )}
 
-        {/* Edit Modal */}
-        {showEditModal && editingItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-5xl bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold">Edit</h4>
-                <Button variant="ghost" onClick={() => { setShowEditModal(false); setEditingItem(null); }}>
-                  Close
-                </Button>
-              </div>
+  //       {/* Edit Modal */}
+  //       {showEditModal && editingItem && (
+  //         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  //           <div className="w-full max-w-5xl bg-white rounded-lg shadow p-6">
+  //             <div className="flex items-center justify-between mb-4">
+  //               <h4 className="text-lg font-semibold">Edit</h4>
+  //               <Button variant="ghost" onClick={() => { setShowEditModal(false); setEditingItem(null); }}>
+  //                 Close
+  //               </Button>
+  //             </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {formHeaders.map((h) => (
-                  <div key={h.field}>
-                    <label className="block text-sm font-medium mb-1">{h.label}</label>
-                    <Input
-                      value={formState[h.field] ?? ""}
-                      onChange={(e) => setFormState((s) => ({ ...s, [h.field]: e.target.value }))}
-                    />
-                  </div>
-                ))}
-              </div>
+  //             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  //               {formHeaders.map((h) => (
+  //                 <div key={h.field}>
+  //                   <label className="block text-sm font-medium mb-1">{h.label}</label>
+  //                   <Input
+  //                     value={formState[h.field] ?? ""}
+  //                     onChange={(e) => setFormState((s) => ({ ...s, [h.field]: e.target.value }))}
+  //                   />
+  //                 </div>
+  //               ))}
+  //             </div>
 
-              <div className="mt-6 flex justify-end gap-2">
-                <Button variant="outline" onClick={() => { setShowEditModal(false); setEditingItem(null); }}>
-                  Cancel
-                </Button>
-                <Button onClick={() => handleEditSave(formState)} disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+  //             <div className="mt-6 flex justify-end gap-2">
+  //               <Button variant="outline" onClick={() => { setShowEditModal(false); setEditingItem(null); }}>
+  //                 Cancel
+  //               </Button>
+  //               <Button onClick={() => handleEditSave(formState)} disabled={isLoading}>
+  //                 {isLoading ? "Saving..." : "Save"}
+  //               </Button>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       )}
 
-        {/* Delete Confirmation */}
-        {showDeleteModal && itemToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-xl bg-white rounded-lg shadow p-6">
-              <h4 className="text-lg font-semibold mb-4">Confirm Delete</h4>
-              <p className="text-sm text-muted-foreground mb-6">
-                Are you sure you want to delete{" "}
-                <span className="font-medium">{String(itemToDelete.name ?? itemToDelete.title ?? itemToDelete.id ?? "this item")}</span>?
-              </p>
+  //       {/* Delete Confirmation */}
+  //       {showDeleteModal && itemToDelete && (
+  //         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+  //           <div className="w-full max-w-xl bg-white rounded-lg shadow p-6">
+  //             <h4 className="text-lg font-semibold mb-4">Confirm Delete</h4>
+  //             <p className="text-sm text-muted-foreground mb-6">
+  //               Are you sure you want to delete{" "}
+  //               <span className="font-medium">{String(itemToDelete.name ?? itemToDelete.title ?? itemToDelete.id ?? "this item")}</span>?
+  //             </p>
 
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => { setShowDeleteModal(false); setItemToDelete(null); }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleDeleteConfirm} disabled={isDeleting}>
-                  {isDeleting ? "Deleting..." : "Delete"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
+  //             <div className="flex justify-end gap-2">
+  //               <Button variant="outline" onClick={() => { setShowDeleteModal(false); setItemToDelete(null); }}>
+  //                 Cancel
+  //               </Button>
+  //               <Button onClick={handleDeleteConfirm} disabled={isDeleting}>
+  //                 {isDeleting ? "Deleting..." : "Delete"}
+  //               </Button>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       )}
+  //     </>
+  //   );
+  // };
+const TableModals: React.FC = () => {
+  const [formState, setFormState] = useState<RowData>({});
+
+  useEffect(() => {
+    if (showEditModal && editingItem) setFormState({ ...editingItem });
+    if (showAddModal) setFormState({});
+  }, [showAddModal, showEditModal, editingItem]);
+
+  // Filter headers that should appear in forms (input !== false)
+  const formHeaders = headers.filter((h) => h.input !== false);
+
+  // Handler for CustomInputField changes
+  const handleFieldChange = (field: string, value: any) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
   };
+
+  return (
+    <>
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-5xl bg-white rounded-lg shadow p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold">Add New</h4>
+              <Button variant="ghost" onClick={() => setShowAddModal(false)}>
+                Close
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formHeaders.map((h) => (
+                <CustomInputField
+                  key={h.field}
+                  field={h.field}
+                  label={h.label}
+                  type={h.type || "text"}
+                  require={h.require || false}
+                  options={h.options || []}
+                  value={formState[h.field] || ""}
+                  onChange={(value) => handleFieldChange(h.field, value)}
+                />
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleAddSave(formState)} disabled={isLoading}>
+                {isLoading ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-5xl bg-white rounded-lg shadow p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-lg font-semibold">Edit</h4>
+              <Button 
+                variant="ghost" 
+                onClick={() => { 
+                  setShowEditModal(false); 
+                  setEditingItem(null); 
+                }}
+              >
+                Close
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {formHeaders.map((h) => (
+                <CustomInputField
+                  key={h.field}
+                  field={h.field}
+                  label={h.label}
+                  type={h.type || "text"}
+                  require={h.require || false}
+                  options={h.options || []}
+                  value={formState[h.field] || ""}
+                  onChange={(value) => handleFieldChange(h.field, value)}
+                />
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => { 
+                  setShowEditModal(false); 
+                  setEditingItem(null); 
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={() => handleEditSave(formState)} disabled={isLoading}>
+                {isLoading ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation - No changes needed */}
+      {showDeleteModal && itemToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xl bg-white rounded-lg shadow p-6">
+            <h4 className="text-lg font-semibold mb-4">Confirm Delete</h4>
+            <p className="text-sm text-muted-foreground mb-6">
+              Are you sure you want to delete{" "}
+              <span className="font-medium">
+                {String(itemToDelete.name ?? itemToDelete.title ?? itemToDelete.id ?? "this item")}
+              </span>?
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => { 
+                  setShowDeleteModal(false); 
+                  setItemToDelete(null); 
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleDeleteConfirm} disabled={isDeleting}>
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
   // --- Empty state simple component
   const EmptyState: React.FC<{ onClearSearch: () => void; onAddNew: () => void; searchTerm: string }> = ({

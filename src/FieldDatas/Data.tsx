@@ -3,7 +3,7 @@ import { useAppState } from "@/globalState/hooks/useAppState";
 import {  Building, MapPin, FileCheck, IndianRupee, Package, FolderOpen,
   Receipt,CreditCard, Calendar, Truck, Hash,PiggyBank, UserPlus,Menu,
   CheckCircle, Gift, FileText, Archive, Settings, Briefcase, Tag, TrendingUp,  Wallet,} from "lucide-react";
-
+import { useMasterOptions } from "@/hooks/ReUsableHook/useMasterOptions";
 /* ---------- Types ---------- */
 
 export interface OptionType {
@@ -11,7 +11,7 @@ export interface OptionType {
   label: string;
 }
 
-export type FieldInputType = "text" | "number" | "select"| "date" | "email" | "textarea";
+export type FieldInputType = "text" | "number" | "select"| "date" | "email" | "textarea"|"checkbox";
 
 export interface FieldType {
   field: string;
@@ -48,8 +48,8 @@ const masterItems: MasterItemType[] = [
   { icon: <TrendingUp className="w-5 h-5" />, name: "Priority Master", category: "finance", color: "bg-emerald-600", id: "PriorityMaster" },
   { icon: <FileCheck className="w-5 h-5" />, name: "PO Approval", category: "approvals", color: "bg-orange-500", id: "POApproval" },
   { icon: <IndianRupee className="w-5 h-5" />, name: "Ledger Master", category: "finance", color: "bg-emerald-500", id: "ledger_master" },
-  { icon: <FolderOpen className="w-5 h-5" />, name: "Product Category", category: "inventory", color: "bg-yellow-500", id: "product_category" },
-  { icon: <Package className="w-5 h-5" />, name: "Product", category: "inventory", color: "bg-indigo-500", id: "product_master" },
+  { icon: <FolderOpen className="w-5 h-5" />, name: "Product Category", category: "inventory", color: "bg-yellow-500", id: "ProductCategoryMaster" },
+  { icon: <Package className="w-5 h-5" />, name: "Product", category: "inventory", color: "bg-indigo-500", id: "ProductMaster" },
   { icon: <FileText className="w-5 h-5" />, name: "KYC", category: "compliance", color: "bg-teal-500", id: "kyc_master" },
   { icon: <Tag className="w-5 h-5" />, name: "Product Rate and Discount", category: "inventory", color: "bg-cyan-500", id: "product_rate_discount" },
   { icon: <UserPlus className="w-5 h-5" />, name: "User Creation", category: "administration", color: "bg-violet-500", id: "user_creation" },
@@ -69,6 +69,7 @@ const masterItems: MasterItemType[] = [
 
 const useCompanyMasterFields = (): FieldType[] => {
   const { formData } = useAppState();
+  console.log(formData)
   return useMemo<FieldType[]>(
     () => [
       { field: "com_sno", label: "S.No", require: false, view: true, type: "text", input: false },
@@ -258,6 +259,65 @@ const usePermissionFieldsMaster = (formData?: any): FieldType[] => {
     []
   );
 };
+const useProductCatagoryMaster = (formData?: any): FieldType[] => {
+  return useMemo<FieldType[]>(
+    () => [
+      { field: "cat_sno", label: "Category ID", require: false, view: true, type: "text", input: false },
+      { field: "cat_name", label: "Category Name", require: true, view: true, type: "text", input: true },
+      { field: "cat_notes", label: "Category Notes", require: true, view: true, type: "text", input: false },
+      { field: "cat_description", label: "Category Description", require: false, view: true, type: "text", input: true },
+      { field: "cat_active", label: "Active Status", require: false, view: false, type: "text", input: false },
+    ],
+    []
+  );
+};
+const useProductSubCatagoryMaster = (formData?: any): FieldType[] => {
+  return useMemo<FieldType[]>(
+    () => [
+      { field: "subcat_sno", label: "Sub Category ID", require: false, view: true, type: "text", input: false },
+      { field: "subcat_name", label: "Sub Category Name", require: true, view: true, type: "text", input: true },
+      { field: "subcat_notes", label: "Sub Category Notes", require: true, view: true, type: "text", input: false },
+      { field: "subcat_description", label: "Sub Category Description", require: false, view: true, type: "text", input: true },
+      { field: "subcat_active", label: "Active Status", require: false, view: false, type: "text", input: false },
+    ],
+    []
+  );
+};
+
+const useProductFieldsMaster = (formData?: any): FieldType[] => {
+  const {options, loading} = useMasterOptions(['ProductCategoryMaster','ProductSubCategoryMaster','UomMaster','TaxMaster']);
+  return useMemo<FieldType[]>(
+    () => [
+      { field: "prod_sno", label: "Product ID", require: false, view: true, type: "text", input: false },
+      // { field: "com_sno", label: "Company", require: true, view: true, type: "select", input: true },
+      // { field: "div_sno", label: "Division", require: true, view: true, type: "select", input: true },
+      // { field: "brn_sno", label: "Branch", require: true, view: true, type: "select", input: true },
+      // { field: "dept_sno", label: "Department", require: true, view: true, type: "select", input: true },
+      { field: "cat_sno", label: "Category", require: true, view: false, type: "select", options: options?.ProductCategoryMaster, input: true },
+      { field: "cat_name", label: "Category", require: true, view: true, type: "select", options: options?.ProductCategoryMaster, input: false },
+
+      { field: "subcat_sno", label: "Sub Category", require: true, view: false, type: "select", options: options?.ProductSubCategoryMaster, input: true },
+      { field: "subcat_name", label: "Sub Category", require: true, view: true, type: "select", options: options?.ProductSubCategoryMaster, input: false },
+
+      { field: "prod_code", label: "Product Code", require: false, view: true, type: "text", input: false },
+      { field: "prod_name", label: "Product Name", require: true, view: true, type: "text", input: true },
+      { field: "hsn_code", label: "HSN Code", require: false, view: true, type: "text", input: true },
+      { field: "uom_sno", label: "Unit of Measurement", require: true, view: false, type: "select", options: options?.UomMaster, input: true },
+      { field: "uom_name", label: "Unit of Measurement", require: true, view: true, type: "select", options: options?.UomMaster, input: false },
+      { field: "tax_sno", label: "Tax", require: true, view: false, type: "select", options: options?.TaxMaster, input: false },
+      { field: "sku", label: "SKU", require: false, view: false, type: "text", input: false },
+      { field: "is_active", label: "Active Status", require: false, view: false, type: "text", input: false },
+      { field: "prod_description", label: "Description", require: false, view: true, type: "textarea", input: true },
+
+
+      // { field: "created_date", label: "Created Date", require: false, view: true, type: "date", input: false },
+      // { field: "created_by", label: "Created By", require: false, view: true, type: "text", input: false },
+      // { field: "modified_date", label: "Modified Date", require: false, view: false, type: "date", input: false },
+      // { field: "modified_by", label: "Modified By", require: false, view: false, type: "text", input: false },
+    ],
+    [options,loading]
+  );
+};
 
 
 
@@ -273,6 +333,9 @@ export {
   usePrefixFieldsMaster,
   usePriorityFieldsMaster,
   useScreensFieldsMaster,
-  usePermissionFieldsMaster
+  usePermissionFieldsMaster,
+  useProductFieldsMaster,
+  useProductCatagoryMaster,
+  useProductSubCatagoryMaster,
 };
 

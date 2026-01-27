@@ -2,6 +2,7 @@
 import { useEffect } from "react"
 import { useDispatch, useSelector, TypedUseSelectorHook } from "react-redux"
 import type { RootState, AppDispatch } from "../store"
+import {socket} from"../../Services/Socket"
 
 // ================= UI =================
 import {
@@ -149,6 +150,7 @@ export const useAppState = () => {
     ...hierarchyCompany,
     ...sidebarData,
     config,
+    socket,
 
     // ===== UI ACTIONS =====
     setSidebarOpen: (value: boolean) => dispatch(setSidebarOpen(value)),

@@ -108,12 +108,12 @@ export function CustomInputField({
    * - calls `onFileChange(File | null)` when file is selected or cleared
    */
   const FileUploadField = ({
-   
+   label,
     name,
     fileValue,
     onFileChange,
   }: {
-   
+   label: string;
     name: string;
     fileValue: File | null | undefined;
     onFileChange: (f: File | null) => void;
@@ -198,6 +198,39 @@ export function CustomInputField({
             {...props}
           />
         );
+        case "checkboxs":
+  return (
+    <>
+      {optionsArray.map((option: Option) => (
+        <div key={option.value} className="flex items-center space-x-2">
+          <Checkbox
+            id={`${field}-${option.value}`}
+            name={field}
+            checked={Array.isArray(value) ? value.includes(option.value) : value === option.value}
+            onCheckedChange={(checked: boolean) => {
+              // Handle multiple checkbox selections
+              if (Array.isArray(value)) {
+                const newValue = checked
+                  ? [...value, option.value]
+                  : value.filter((v: string) => v !== option.value);
+                handleChange(newValue);
+              } else {
+                handleChange(checked ? option.value : null);
+              }
+            }}
+            disabled={disabled}
+          />
+          <Label 
+            htmlFor={`${field}-${option.value}`} 
+            className="text-sm font-normal cursor-pointer"
+          >
+            {option.label}
+          </Label>
+        </div>
+      ))}
+    </>
+  );
+
 
       case "switch":
         return (
@@ -307,9 +340,9 @@ export function CustomInputField({
             {value?.length > 0 && (
               <div className="flex flex-wrap md:flex-nowrap items-center gap-1   whitespace-nowrap text-xs text-slate-600 py-1">
                 {value
-                  .map((val) => optionsArray.find((opt) => opt.value === val)?.label)
+                  .map((val: string) => optionsArray.find((opt) => opt.value === val)?.label)
                   .filter(Boolean)
-                  .map((label, idx) => (
+                  .map((label: string, idx: number) => (
                     <span key={idx} className="bg-slate-100 px-2 py-1 rounded mb-1 md:mb-0">
                       {label}
                     </span>

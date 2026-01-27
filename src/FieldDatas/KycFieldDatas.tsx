@@ -45,8 +45,8 @@ export const useComDivBranchDeptFields = (
     .filter((company: Company) => 
       selectedCompany.includes(company.com_sno) // Filter by selected company
     )
-    .flatMap((company: Company) => 
-      company.divisions.map((division) => ({
+    .flatMap((company: any) => 
+      company.divisions.map((division: Division) => ({
         label: division.div_name,
         value: division.div_sno,
       }))
@@ -59,11 +59,11 @@ export const useComDivBranchDeptFields = (
   if (!hierarchyData?.companies || selectedDivision.length === 0) return [];
   
   return hierarchyData.companies
-    .flatMap((company: Company) => company.divisions)
-    .filter((division) => 
-      selectedDivision.includes(division.div_sno) // Filter by selected division
+    .flatMap((company: any) => company.divisions)
+    .filter((division: Division) => 
+      selectedDivision.includes(division.div_sno) 
     )
-    .flatMap((division) => 
+    .flatMap((division: Division) => 
       division.branches.map((branch) => ({
         label: branch.brn_name,
         value: branch.brn_sno,

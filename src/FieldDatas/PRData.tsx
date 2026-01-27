@@ -1,85 +1,75 @@
-import React from "react";
-import { CalendarDays, Plus, Eye } from "lucide-react";
-import { useAppState } from "@/globalState/hooks/useAppState";
-// --- Types ---
-type SelectOption = { value: string; label: string };
+import { useMemo } from "react";
+import type {FieldType} from "./fieldType/fieldType";
+import { useMasterOptions } from "../hooks/ReUsableHook/useMasterOptions";
 
-type FieldType = "text" | "number" | "date" | "textarea" | "select" | "email";
 
-interface Field {
-  field: string;
-  label: string;
-  placeholder?: string;
-  require?: boolean;
-  view?: boolean;
-  type: FieldType;
-  input?: boolean;
-  options?: SelectOption[];
-  gridSpan?: string;
-  defaultValue?: string | number;
-}
 
-type Priority = { value: string; label: string; color: string };
-
-type TabItem = { id: string; label: string; icon: React.ComponentType<any> };
-
-// --- Constants ---
-const reasons: SelectOption[] = [
-  { value: "Equipment Replacement", label: "Equipment Replacement" },
-  { value: "New Equipment Purchase", label: "New Equipment Purchase" },
-  { value: "Office Supplies", label: "Office Supplies" },
-  { value: "Maintenance & Repair", label: "Maintenance & Repair" },
-  { value: "Software License", label: "Software License" },
-  { value: "Professional Services", label: "Professional Services" },
-  { value: "Marketing Materials", label: "Marketing Materials" },
-  { value: "Training & Development", label: "Training & Development" },
-  { value: "Other", label: "Other" },
-];
-
-const priorities: Priority[] = [
-  { value: "urgent", label: "Urgent", color: "bg-red-100 text-red-800" },
-  { value: "high", label: "High", color: "bg-orange-100 text-orange-800" },
-  { value: "medium", label: "Medium", color: "bg-yellow-100 text-yellow-800" },
-  { value: "low", label: "Low", color: "bg-green-100 text-green-800" },
-];
-
-const tabs: TabItem[] = [
-  { id: "basic", label: "Basic Info", icon: CalendarDays },
-  { id: "items", label: "Items", icon: Plus },
-  { id: "summary", label: "Summary", icon: Eye },
-];
-
-const supplierFields: Field[] = [
-  { field: "name", label: "Company Name", placeholder: "Company name", require: true, view: true, type: "text", input: true },
-  { field: "contactPerson", label: "Contact Person", placeholder: "Contact person", require: true, view: true, type: "text", input: true },
-  { field: "phone", label: "Phone", placeholder: "Phone number", require: true, view: true, type: "text", input: true },
-  { field: "email", label: "Email", placeholder: "Email address", require: true, view: true, type: "email", input: true },
-  { field: "address", label: "Address", placeholder: "Complete address", require: true, view: true, type: "textarea", input: true },
-];
-
-const itemFields: Field[] = [
-  { field: "PR_PRODUCT", label: "Product", placeholder: "Item description", require: true, view: true, type: "text", input: true },
-  { field: "PR_QTY", label: "Quantity", placeholder: "Item Quantity", require: true, view: true, type: "number", input: true },
-  { field: "UOM_SNO_DATA", label: "UOM", placeholder: "UOM", require: true, view: true, type: "text", input: true },
-  { field: "SPECS", label: "Specifications", placeholder: "Specifications", require: true, view: true, type: "textarea", input: true },
-];
-
-// --- Hook ---
-const useBasicInfoFields = (): Field[] => {
-  const { companyDetails, divDetails, branchDetails } = useAppState();
-
-  return [
-    { field: "REQ_DATE", label: "Required Date", type: "date", require: true },
-    {
-      field: "PRIORITY",
-      label: "Priority",
-      type: "select",
-      require: true,
-      options: priorities.map((p) => ({ label: p.label, value: p.value })),
-    },
-    { field: "REASON", label: "Reason", type: "select", require: true, options: reasons, gridSpan: "sm:col-span-2" },
-  ];
+export const usePRBasicInfoFields = (formData?: any): FieldType[] => {
+  const {options, loading} = useMasterOptions(['BranchMaster','DeptMaster','PRBudget','PriorityMaster']);
+  
+  return useMemo<FieldType[]>(
+    () => [
+      { field: "pr_basic_sno", label: "PR Basic ID", require: false, view: true, type: "text", input: false },
+      
+      { field: "brn_sno", label: "Branch", require: true, view: false, type: "select", options: options?.BranchMaster, input: true },
+      { field: "brn_name", label: "Branch", require: true, view: true, type: "select", options: options?.BranchMaster, input: false },
+      
+      { field: "dept_sno", label: "Department", require: true, view: false, type: "select", options: options?.DeptMaster, input: true },
+      { field: "dept_name", label: "Department", require: true, view: true, type: "select", options: options?.DeptMaster, input: false },
+      
+      { field: "budget_sno", label: "Budget", require: true, view: false, type: "select", options: options?.PRBudget, input: true },
+      { field: "budget_name", label: "Budget", require: true, view: true, type: "select", options: options?.PRBudget, input: false },
+      
+      { field: "budget_code", label: "Budget Code", require: false, view: true, type: "text", input: false },
+      
+      { field: "req_date", label: "Request Date", require: true, view: true, type: "date", input: true },
+      { field: "required_date", label: "Required Date", require: true, view: true, type: "date", input: true }  ,
+      
+      { field: "priority_sno", label: "Priority", require: true, view: false, type: "select", options: options?.PriorityMaster, input: true },
+      { field: "priority_name", label: "Priority", require: true, view: true, type: "select", options: options?.PriorityMaster, input: false },
+      
+      { field: "purpose", label: "Purpose", require: false, view: true, type: "textarea", input: true },
+      
+      { field: "is_active", label: "Active Status", require: false, view: false, type: "text", input: false },
+      
+      
+    ],
+    [options, loading]
+  );
 };
 
-export type { Field, SelectOption, Priority, TabItem };
-export { itemFields, supplierFields, useBasicInfoFields, tabs, priorities };
+export const usePRItemDetailsFields = (formData?: any): FieldType[] => {
+  const {options, loading} = useMasterOptions(['ProductMaster','UomMaster','PRBasicInfo','PRBudget']);
+  
+  return useMemo<FieldType[]>(
+    () => [
+      { field: "pr_item_sno", label: "PR Item ID", require: false, view: true, type: "text", input: false },
+      
+      { field: "pr_basic_sno", label: "PR Basic", require: true, view: false, type: "select", options: options?.PRBasicInfo, input: true },
+      { field: "pr_basic_name", label: "PR Basic", require: true, view: true, type: "select", options: options?.PRBasicInfo, input: false },
+      
+      { field: "prod_sno", label: "Product", require: true, view: false, type: "select", options: options?.ProductMaster, input: true },
+      { field: "prod_name", label: "Product", require: true, view: true, type: "select", options: options?.ProductMaster, input: false },
+      
+      
+      
+      { field: "qty", label: "Quantity", require: true, view: true, type: "number", input: true },
+      
+      { field: "unit", label: "Unit", require: true, view: false, type: "select", options: options?.UomMaster, input: true },
+      { field: "unit_name", label: "Unit", require: true, view: true, type: "select", options: options?.UomMaster, input: false },
+      
+      { field: "est_cost", label: "Estimated Cost", require: false, view: true, type: "number", input: true },
+      { field: "total_cost", label: "Total Cost", require: false, view: true, type: "number", input: true },
+      
+      { field: "remarks", label: "Remarks", require: false, view: true, type: "textarea", input: true },
+      
+      { field: "is_active", label: "Active Status", require: false, view: false, type: "text", input: false },
+      
+      // { field: "created_date", label: "Created Date", require: false, view: true, type: "date", input: false },
+      // { field: "created_by", label: "Created By", require: false, view: true, type: "text", input: false },
+      // { field: "modified_date", label: "Modified Date", require: false, view: false, type: "date", input: false },
+      // { field: "modified_by", label: "Modified By", require: false, view: false, type: "text", input: false },
+    ],
+    [options, loading]
+  );
+};

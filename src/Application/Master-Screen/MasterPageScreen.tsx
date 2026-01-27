@@ -24,7 +24,7 @@ interface Category {
 
 const MasterScreen: React.FC = () => {
   const { selectedMaster, setCurrentScreen,setSelectedMaster } = useAppState() as any;
-
+console.log(selectedMaster)
   const masterDataResult = useMasterDataFields() as any;
   const fields: Record<string, any[]> = masterDataResult?.fields || {};
   const headerData = selectedMaster ? (fields[selectedMaster] || []) : [];

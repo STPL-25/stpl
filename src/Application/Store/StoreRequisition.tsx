@@ -417,7 +417,7 @@ const StoreRequisitionDashboard: React.FC = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3 lg:w-[600px]">
+          <TabsList className="grid w-full grid-cols-2 lg:w-[600px]">
             <TabsTrigger value="new-requisition">
               <Plus className="h-4 w-4 mr-2" />
               New Requisition
@@ -426,10 +426,10 @@ const StoreRequisitionDashboard: React.FC = () => {
               <FileText className="h-4 w-4 mr-2" />
               My Requisitions
             </TabsTrigger>
-            <TabsTrigger value="stock-overview">
+            {/* <TabsTrigger value="stock-overview">
               <Package className="h-4 w-4 mr-2" />
               Stock Overview
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           {/* New Requisition Tab */}

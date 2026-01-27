@@ -11,7 +11,7 @@ import ErrorMessage from "@/CustomComponent/ErrorMessage/ErrorMessage";
 import Loading from "@/CustomComponent/LoadingComponents/Loading";
 
 const Dashboard: React.FC = () => {
-  const { sidebarOpen, sidebarWidth, isFullscreen } = useAppState() as any;
+  const { sidebarOpen, sidebarWidth, isFullscreen,socket } = useAppState() as any;
   const [isMobile, setIsMobile] = useState<boolean>(false);
 
   useEffect(() => {

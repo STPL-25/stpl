@@ -12,6 +12,11 @@ import {
   usePriorityFieldsMaster,
   useScreensFieldsMaster,
   usePermissionFieldsMaster,
+  useProductCatagoryMaster,
+  useProductFieldsMaster,
+  useProductSubCatagoryMaster,
+} from "./Data";
+import type { FieldType
 } from "./Data";
 
 
@@ -39,6 +44,9 @@ export const useMasterDataFields = () => {
     PriorityMaster: usePriorityFieldsMaster(),
     ScreenMaster: useScreensFieldsMaster(),
     ScreenPermission: usePermissionFieldsMaster(),
+    ProductMaster: useProductFieldsMaster(),
+    ProductCategoryMaster: useProductCatagoryMaster(),
+    ProductSubCategoryMaster: useProductSubCatagoryMaster(),
   };
 
   return { fields };
