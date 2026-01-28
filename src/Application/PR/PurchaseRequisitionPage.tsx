@@ -1,142 +1,295 @@
-// import React, { useState } from 'react';
-// import { Button } from '@/components/ui/button';
-// import { Input } from '@/components/ui/input';
-// import { Label } from '@/components/ui/label';
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Textarea } from '@/components/ui/textarea';
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-// import { Calendar } from '@/components/ui/calendar';
-// import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-// import { CalendarIcon, Plus, Trash2 } from 'lucide-react';
-// import { format } from 'date-fns';
-// import type {RequisitionItem} from "./types/PurchaseRequisitionPageTypes";
 
+// import React, { useState, useMemo, useEffect } from 'react';
+// import { Button } from '@/components/ui/button';
+// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// import { Plus, Trash2 } from 'lucide-react';
+// import { CustomInputField } from '@/CustomComponent/InputComponents/CustomInputField';
+// import { usePRBasicInfoFields, usePRItemDetailsFields } from '@/FieldDatas/PRData';
+
+// interface FormErrors {
+//   [key: string]: string;
+// }
+
+// interface FieldConfig {
+//   field: string;
+//   label: string;
+//   type: string;
+//   require?: boolean;
+//   input?: boolean;
+//   options?: any;
+//   defaultValue?: any;
+// }
 
 // const PurchaseRequisitionPage: React.FC = () => {
-//   const [requiredDate, setRequiredDate] = useState<Date>();
-//   const [requestDate, setRequestDate] = useState<Date>(new Date());
-//   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-//   const [formData, setFormData] = useState({
-//     requestedBy: '',
-//     department: '',
-//     costCenter: '',
-//     priority: '',
-//     purpose: '',
-//   });
+//   // Get field configurations
+//   const basicInfoFields = usePRBasicInfoFields();
+//   const itemDetailsFields = usePRItemDetailsFields();
 
-//   const [items, setItems] = useState<RequisitionItem[]>([
-//     {
-//       id: '1',
-//       itemDescription: '',
-//       specification: '',
-//       quantity: 1,
-//       unit: 'pcs',
-//       estimatedCost: 0,
-//       totalCost: 0,
-//       remarks: '',
-//     },
-//   ]);
+//   // Dynamically create initial state from basicInfoFields
+//   const initialBasicFormData = useMemo(() => {
+//     const initialData: Record<string, any> = {};
+    
+//     basicInfoFields.forEach((field: FieldConfig) => {
+//       if (field.input) {
+//         // Set default values based on field type
+//         if (field.defaultValue !== undefined) {
+//           initialData[field.field] = field.defaultValue;
+//         } else if (field.field === 'req_date') {
+//           initialData[field.field] = new Date().toISOString().split('T')[0];
+//         } else if (field.type === 'number') {
+//           initialData[field.field] = 0;
+//         } else {
+//           initialData[field.field] = '';
+//         }
+//       }
+//     });
+    
+//     return initialData;
+//   }, [basicInfoFields]);
 
-//   const handleInputChange = (field: string, value: string) => {
-//     setFormData({ ...formData, [field]: value });
-//     if (errors[field]) {
-//       setErrors({ ...errors, [field]: '' });
+//   // Dynamically create initial item structure from itemDetailsFields
+//   const createNewItem = useMemo(() => {
+//     return (id: string = Date.now().toString()) => {
+//       const newItem: Record<string, any> = { id };
+      
+//       itemDetailsFields.forEach((field: FieldConfig) => {
+//         if (field.input && field.field !== 'pr_item_sno' && field.field !== 'pr_basic_sno') {
+//           // Set default values based on field type
+//           if (field.defaultValue !== undefined) {
+//             newItem[field.field] = field.defaultValue;
+//           } else if (field.field === 'qty') {
+//             newItem[field.field] = 1;
+//           } else if (field.field === 'est_cost' || field.field === 'total_cost') {
+//             newItem[field.field] = 0;
+//           } else if (field.field === 'is_active') {
+//             newItem[field.field] = true;
+//           } else if (field.type === 'number') {
+//             newItem[field.field] = 0;
+//           } else if (field.type === 'checkbox' || field.type === 'boolean') {
+//             newItem[field.field] = false;
+//           } else {
+//             newItem[field.field] = '';
+//           }
+//         }
+//       });
+      
+//       return newItem;
+//     };
+//   }, [itemDetailsFields]);
+
+//   // State for basic info form data
+//   const [basicFormData, setBasicFormData] = useState<Record<string, any>>(initialBasicFormData);
+
+//   // State for items - initialize with one item
+//   const [items, setItems] = useState<Record<string, any>[]>([createNewItem('1')]);
+
+//   const [errors, setErrors] = useState<FormErrors>({});
+// console.log(basicFormData)
+//   // Update state when field configurations change
+//   useEffect(() => {
+//     setBasicFormData(initialBasicFormData);
+//   }, [initialBasicFormData]);
+
+//   // Filter fields for input vs view
+//   const inputBasicFields = useMemo(
+//     () => basicInfoFields.filter((field) => field.input),
+//     [basicInfoFields]
+//   );
+
+//   const inputItemFields = useMemo(
+//     () => itemDetailsFields.filter(
+//       (field) => field.input && field.field !== 'pr_item_sno' && field.field !== 'pr_basic_sno'
+//     ),
+//     [itemDetailsFields]
+//   );
+
+//   // Handle basic form field changes
+//   const handleBasicFieldChange = (fieldName: string, value: any) => {
+//     setBasicFormData((prev) => ({ ...prev, [fieldName]: value }));
+    
+//     // Clear error for this field
+//     if (errors[fieldName]) {
+//       setErrors((prev) => {
+//         const newErrors = { ...prev };
+//         delete newErrors[fieldName];
+//         return newErrors;
+//       });
+//     }
+
+//     // Handle dependent field updates (e.g., when selecting a master, update the name field)
+//     const field = basicInfoFields.find((f) => f.field === fieldName);
+//     if (field && field.options && typeof field.options !== 'string') {
+//       const selectedOption = field.options.find((opt: any) => opt.value === value);
+//       if (selectedOption) {
+//         const nameField = fieldName.replace('_sno', '_name');
+//         setBasicFormData((prev) => ({ ...prev, [nameField]: selectedOption.label }));
+//       }
 //     }
 //   };
 
-//   const handleItemChange = (id: string, field: keyof RequisitionItem, value: any) => {
-//     setItems(items.map(item => {
-//       if (item.id === id) {
-//         const updatedItem = { ...item, [field]: value };
-//         if (field === 'quantity' || field === 'estimatedCost') {
-//           updatedItem.totalCost = updatedItem.quantity * updatedItem.estimatedCost;
+//   // Handle item field changes
+//   const handleItemChange = (itemId: string, fieldName: string, value: any) => {
+//     setItems((prevItems) =>
+//       prevItems.map((item) => {
+//         if (item.id === itemId) {
+//           const updatedItem = { ...item, [fieldName]: value };
+
+//           // Auto-calculate total_cost when qty or est_cost changes
+//           if (fieldName === 'qty' || fieldName === 'est_cost') {
+//             const qty = fieldName === 'qty' ? parseFloat(value) || 0 : parseFloat(updatedItem.qty) || 0;
+//             const estCost = fieldName === 'est_cost' ? parseFloat(value) || 0 : parseFloat(updatedItem.est_cost) || 0;
+//             updatedItem.total_cost = qty * estCost;
+//           }
+
+//           // Handle dependent field updates for dropdowns
+//           const field = itemDetailsFields.find((f) => f.field === fieldName);
+//           if (field && field.options && typeof field.options !== 'string') {
+//             const selectedOption = field.options.find((opt: any) => opt.value === value);
+//             if (selectedOption) {
+//               const nameField = fieldName.replace('_sno', '_name');
+//               updatedItem[nameField] = selectedOption.label;
+//             }
+//           }
+
+//           return updatedItem;
 //         }
-//         return updatedItem;
-//       }
-//       return item;
-//     }));
+//         return item;
+//       })
+//     );
+
+//     // Clear item-specific error
+//     const errorKey = `item_${itemId}_${fieldName}`;
+//     if (errors[errorKey]) {
+//       setErrors((prev) => {
+//         const newErrors = { ...prev };
+//         delete newErrors[errorKey];
+//         return newErrors;
+//       });
+//     }
 //   };
 
+//   // Add new item row
 //   const addItem = () => {
-//     const newItem: RequisitionItem = {
-//       id: Date.now().toString(),
-//       itemDescription: '',
-//       specification: '',
-//       quantity: 1,
-//       unit: 'pcs',
-//       estimatedCost: 0,
-//       totalCost: 0,
-//       remarks: '',
-//     };
+//     const newItem = createNewItem();
 //     setItems([...items, newItem]);
 //   };
 
-//   const removeItem = (id: string) => {
+//   // Remove item row
+//   const removeItem = (itemId: string) => {
 //     if (items.length > 1) {
-//       setItems(items.filter(item => item.id !== id));
+//       setItems(items.filter((item) => item.id !== itemId));
+      
+//       // Clear errors for removed item
+//       setErrors((prev) => {
+//         const newErrors = { ...prev };
+//         Object.keys(newErrors).forEach((key) => {
+//           if (key.startsWith(`item_${itemId}_`)) {
+//             delete newErrors[key];
+//           }
+//         });
+//         return newErrors;
+//       });
 //     }
 //   };
 
+//   // Validate form
 //   const validateForm = (): boolean => {
-//     const newErrors: Record<string, string> = {};
+//     const newErrors: FormErrors = {};
 
-//     if (!formData.requestedBy.trim()) {
-//       newErrors.requestedBy = 'Requested by is required';
-//     }
-//     if (!formData.department.trim()) {
-//       newErrors.department = 'Department is required';
-//     }
-//     if (!formData.costCenter.trim()) {
-//       newErrors.costCenter = 'Cost center is required';
-//     }
-//     if (!formData.priority) {
-//       newErrors.priority = 'Priority is required';
-//     }
-//     if (!requiredDate) {
-//       newErrors.requiredDate = 'Required date is required';
-//     }
-//     if (!formData.purpose.trim()) {
-//       newErrors.purpose = 'Purpose is required';
-//     }
+//     // Validate basic info fields
+//     inputBasicFields.forEach((field) => {
+//       if (field.require && !basicFormData[field.field]) {
+//         newErrors[field.field] = `${field.label} is required`;
+//       }
+//     });
 
 //     // Validate items
-//     items.forEach((item, index) => {
-//       if (!item.itemDescription.trim()) {
-//         newErrors[`item_${index}_description`] = 'Item description is required';
-//       }
-//       if (item.quantity <= 0) {
-//         newErrors[`item_${index}_quantity`] = 'Quantity must be greater than 0';
-//       }
+//     items.forEach((item) => {
+//       inputItemFields.forEach((field) => {
+//         if (field.require && !item[field.field]) {
+//           newErrors[`item_${item.id}_${field.field}`] = `${field.label} is required`;
+//         }
+        
+//         // Additional validation for quantity
+//         if (field.field === 'qty' && (item.qty <= 0 || !item.qty)) {
+//           newErrors[`item_${item.id}_qty`] = 'Quantity must be greater than 0';
+//         }
+
+//         // Additional validation for cost fields
+//         if ((field.field === 'est_cost' || field.field === 'total_cost') && item[field.field] < 0) {
+//           newErrors[`item_${item.id}_${field.field}`] = `${field.label} cannot be negative`;
+//         }
+//       });
 //     });
 
 //     setErrors(newErrors);
 //     return Object.keys(newErrors).length === 0;
 //   };
 
+//   // Handle form submission
 //   const handleSubmit = (e: React.FormEvent) => {
 //     e.preventDefault();
-    
+
 //     if (validateForm()) {
 //       const requisitionData = {
-//         ...formData,
-//         requestDate,
-//         requiredDate,
-//         items,
-//         totalAmount: items.reduce((sum, item) => sum + item.totalCost, 0),
+//         basicInfo: basicFormData,
+//         items: items.map(({ id, ...item }) => item), // Remove temporary id before submission
+//         totalAmount: totalAmount,
+//         submittedAt: new Date().toISOString(),
 //       };
-      
-//       console.log('Requisition Data:', requisitionData);
-//       // Handle form submission (API call)
+
+//       console.log('Purchase Requisition Data:', requisitionData);
+//       // TODO: Call your API here
 //       alert('Purchase Requisition submitted successfully!');
+//     } else {
+//       console.log('Validation errors:', errors);
+      
+//       // Scroll to first error
+//       const firstErrorElement = document.querySelector('[data-error="true"]');
+//       if (firstErrorElement) {
+//         firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+//       }
 //     }
 //   };
 
-//   const totalAmount = items.reduce((sum, item) => sum + item.totalCost, 0);
+//   // Handle save as draft
+//   const handleSaveAsDraft = () => {
+//     const draftData = {
+//       basicInfo: basicFormData,
+//       items: items,
+//       totalAmount: totalAmount,
+//       savedAt: new Date().toISOString(),
+//       isDraft: true,
+//     };
+
+//     console.log('Saving draft:', draftData);
+//     // TODO: Call your API to save draft
+//     alert('Draft saved successfully!');
+//   };
+
+//   // Calculate total amount
+//   const totalAmount = useMemo(
+//     () => items.reduce((sum, item) => sum + (parseFloat(item.total_cost) || 0), 0),
+//     [items]
+//   );
+
+//   // Get table columns for items (only fields that should be shown in table)
+//   const tableColumns = useMemo(() => {
+//     return inputItemFields.filter((field) =>
+//       !['pr_item_sno', 'pr_basic_sno', 'is_active'].includes(field.field)
+//     );
+//   }, [inputItemFields]);
+
+//   // Reset form
+//   const handleReset = () => {
+//     setBasicFormData(initialBasicFormData);
+//     setItems([createNewItem('1')]);
+//     setErrors({});
+//   };
 
 //   return (
-//     <div className="container mx-auto py-8  ">
+//     <div className="container mx-auto py-8 px-4">
 //       <Card>
 //         <CardHeader>
 //           <CardTitle className="text-2xl">Purchase Requisition - Non Trade</CardTitle>
@@ -146,159 +299,33 @@
 //         </CardHeader>
 //         <CardContent>
 //           <form onSubmit={handleSubmit} className="space-y-6">
-//             {/* Basic Information */}
-//             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-//               <div className="space-y-2">
-//                 <Label htmlFor="requestedBy">
-//                   Requested By <span className="text-red-500">*</span>
-//                 </Label>
-//                 <Input
-//                   id="requestedBy"
-//                   value={formData.requestedBy}
-//                   onChange={(e) => handleInputChange('requestedBy', e.target.value)}
-//                   placeholder="Enter your name"
-//                 />
-//                 {errors.requestedBy && (
-//                   <p className="text-sm text-red-500">{errors.requestedBy}</p>
-//                 )}
-//               </div>
-
-//               <div className="space-y-2">
-//                 <Label htmlFor="department">
-//                   Department <span className="text-red-500">*</span>
-//                 </Label>
-//                 <Select
-//                   value={formData.department}
-//                   onValueChange={(value) => handleInputChange('department', value)}
-//                 >
-//                   <SelectTrigger>
-//                     <SelectValue placeholder="Select department" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="IT">IT</SelectItem>
-//                     <SelectItem value="HR">HR</SelectItem>
-//                     <SelectItem value="Finance">Finance</SelectItem>
-//                     <SelectItem value="Operations">Operations</SelectItem>
-//                     <SelectItem value="Admin">Admin</SelectItem>
-//                     <SelectItem value="Maintenance">Maintenance</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-//                 {errors.department && (
-//                   <p className="text-sm text-red-500">{errors.department}</p>
-//                 )}
-//               </div>
-
-//               <div className="space-y-2">
-//                 <Label htmlFor="costCenter">
-//                   Cost Center / Budget Code <span className="text-red-500">*</span>
-//                 </Label>
-//                 <Input
-//                   id="costCenter"
-//                   value={formData.costCenter}
-//                   onChange={(e) => handleInputChange('costCenter', e.target.value)}
-//                   placeholder="e.g., CC-001"
-//                 />
-//                 {errors.costCenter && (
-//                   <p className="text-sm text-red-500">{errors.costCenter}</p>
-//                 )}
-//               </div>
-
-//               <div className="space-y-2">
-//                 <Label htmlFor="requestDate">Request Date</Label>
-//                 <Popover>
-//                   <PopoverTrigger asChild>
-//                     <Button
-//                       variant="outline"
-//                       className="w-full justify-start text-left font-normal"
-//                     >
-//                       <CalendarIcon className="mr-2 h-4 w-4" />
-//                       {format(requestDate, 'PPP')}
-//                     </Button>
-//                   </PopoverTrigger>
-//                   <PopoverContent className="w-auto p-0">
-//                     <Calendar
-//                       mode="single"
-//                       selected={requestDate}
-//                       onSelect={(date) => date && setRequestDate(date)}
-//                       initialFocus
+//             {/* Basic Information Section */}
+//             <div>
+//               <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
+//               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+//                 {inputBasicFields.map((field) => (
+//                   <div key={field.field} data-error={!!errors[field.field]}>
+//                     <CustomInputField
+//                       field={field.field}
+//                       label={field.label}
+//                       require={field.require}
+//                       type={field.type}
+//                       options={field.options}
+//                       value={basicFormData[field.field] || ''}
+//                       onChange={(value) => handleBasicFieldChange(field.field, value)}
+//                       error={errors[field.field]}
+//                       placeholder={`Enter ${field.label.toLowerCase()}`}
 //                     />
-//                   </PopoverContent>
-//                 </Popover>
-//               </div>
-
-//               <div className="space-y-2">
-//                 <Label htmlFor="requiredDate">
-//                   Required By Date <span className="text-red-500">*</span>
-//                 </Label>
-//                 <Popover>
-//                   <PopoverTrigger asChild>
-//                     <Button
-//                       variant="outline"
-//                       className="w-full justify-start text-left font-normal"
-//                     >
-//                       <CalendarIcon className="mr-2 h-4 w-4" />
-//                       {requiredDate ? format(requiredDate, 'PPP') : 'Pick a date'}
-//                     </Button>
-//                   </PopoverTrigger>
-//                   <PopoverContent className="w-auto p-0">
-//                     <Calendar
-//                       mode="single"
-//                       selected={requiredDate}
-//                       onSelect={setRequiredDate}
-//                       initialFocus
-//                     />
-//                   </PopoverContent>
-//                 </Popover>
-//                 {errors.requiredDate && (
-//                   <p className="text-sm text-red-500">{errors.requiredDate}</p>
-//                 )}
-//               </div>
-
-//               <div className="space-y-2">
-//                 <Label htmlFor="priority">
-//                   Priority Level <span className="text-red-500">*</span>
-//                 </Label>
-//                 <Select
-//                   value={formData.priority}
-//                   onValueChange={(value) => handleInputChange('priority', value)}
-//                 >
-//                   <SelectTrigger>
-//                     <SelectValue placeholder="Select priority" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="low">Low</SelectItem>
-//                     <SelectItem value="medium">Medium</SelectItem>
-//                     <SelectItem value="high">High</SelectItem>
-//                     <SelectItem value="urgent">Urgent</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-//                 {errors.priority && (
-//                   <p className="text-sm text-red-500">{errors.priority}</p>
-//                 )}
+//                   </div>
+//                 ))}
 //               </div>
 //             </div>
 
-//             <div className="space-y-2">
-//               <Label htmlFor="purpose">
-//                 Purpose / Justification <span className="text-red-500">*</span>
-//               </Label>
-//               <Textarea
-//                 id="purpose"
-//                 value={formData.purpose}
-//                 onChange={(e) => handleInputChange('purpose', e.target.value)}
-//                 placeholder="Explain the business need for this purchase"
-//                 rows={3}
-//               />
-//               {errors.purpose && (
-//                 <p className="text-sm text-red-500">{errors.purpose}</p>
-//               )}
-//             </div>
-
-//             {/* Items Table */}
+//             {/* Items Table Section */}
 //             <div className="space-y-4">
 //               <div className="flex items-center justify-between">
-//                 <Label className="text-lg font-semibold">Requisition Items</Label>
-//                 <Button type="button" onClick={addItem} size="sm">
+//                 <h3 className="text-lg font-semibold">Requisition Items</h3>
+//                 <Button type="button" onClick={addItem} size="sm" variant="outline">
 //                   <Plus className="h-4 w-4 mr-2" />
 //                   Add Item
 //                 </Button>
@@ -308,98 +335,49 @@
 //                 <Table>
 //                   <TableHeader>
 //                     <TableRow>
-//                       <TableHead className="w-[200px]">Item Description *</TableHead>
-//                       <TableHead className="w-[200px]">Specification</TableHead>
-//                       <TableHead className="w-[100px]">Quantity *</TableHead>
-//                       <TableHead className="w-[100px]">Unit</TableHead>
-//                       <TableHead className="w-[120px]">Est. Cost</TableHead>
-//                       <TableHead className="w-[120px]">Total Cost</TableHead>
-//                       <TableHead className="w-[150px]">Remarks</TableHead>
-//                       <TableHead className="w-[60px]">Action</TableHead>
+//                       <TableHead className="w-[50px]">S.No</TableHead>
+//                       {tableColumns.map((field) => (
+//                         <TableHead key={field.field} className="min-w-[150px]">
+//                           {field.label}
+//                           {field.require && <span className="text-red-500 ml-1">*</span>}
+//                         </TableHead>
+//                       ))}
+//                       <TableHead className="w-[80px]">Action</TableHead>
 //                     </TableRow>
 //                   </TableHeader>
 //                   <TableBody>
 //                     {items.map((item, index) => (
 //                       <TableRow key={item.id}>
-//                         <TableCell>
-//                           <Input
-//                             value={item.itemDescription}
-//                             onChange={(e) =>
-//                               handleItemChange(item.id, 'itemDescription', e.target.value)
-//                             }
-//                             placeholder="Item name"
-//                             className={errors[`item_${index}_description`] ? 'border-red-500' : ''}
-//                           />
-//                         </TableCell>
-//                         <TableCell>
-//                           <Input
-//                             value={item.specification}
-//                             onChange={(e) =>
-//                               handleItemChange(item.id, 'specification', e.target.value)
-//                             }
-//                             placeholder="Size, color, etc."
-//                           />
-//                         </TableCell>
-//                         <TableCell>
-//                           <Input
-//                             type="number"
-//                             value={item.quantity}
-//                             onChange={(e) =>
-//                               handleItemChange(item.id, 'quantity', parseFloat(e.target.value) || 0)
-//                             }
-//                             min="0"
-//                             step="1"
-//                             className={errors[`item_${index}_quantity`] ? 'border-red-500' : ''}
-//                           />
-//                         </TableCell>
-//                         <TableCell>
-//                           <Select
-//                             value={item.unit}
-//                             onValueChange={(value) => handleItemChange(item.id, 'unit', value)}
-//                           >
-//                             <SelectTrigger>
-//                               <SelectValue />
-//                             </SelectTrigger>
-//                             <SelectContent>
-//                               <SelectItem value="pcs">Pcs</SelectItem>
-//                               <SelectItem value="kg">Kg</SelectItem>
-//                               <SelectItem value="ltr">Ltr</SelectItem>
-//                               <SelectItem value="box">Box</SelectItem>
-//                               <SelectItem value="set">Set</SelectItem>
-//                               <SelectItem value="mtr">Mtr</SelectItem>
-//                             </SelectContent>
-//                           </Select>
-//                         </TableCell>
-//                         <TableCell>
-//                           <Input
-//                             type="number"
-//                             value={item.estimatedCost}
-//                             onChange={(e) =>
-//                               handleItemChange(
-//                                 item.id,
-//                                 'estimatedCost',
-//                                 parseFloat(e.target.value) || 0
-//                               )
-//                             }
-//                             min="0"
-//                             step="0.01"
-//                             placeholder="0.00"
-//                           />
-//                         </TableCell>
-//                         <TableCell>
-//                           <div className="font-medium">
-//                             ₹{item.totalCost.toFixed(2)}
-//                           </div>
-//                         </TableCell>
-//                         <TableCell>
-//                           <Input
-//                             value={item.remarks}
-//                             onChange={(e) =>
-//                               handleItemChange(item.id, 'remarks', e.target.value)
-//                             }
-//                             placeholder="Optional"
-//                           />
-//                         </TableCell>
+//                         <TableCell className="text-center font-medium">{index + 1}</TableCell>
+//                         {tableColumns.map((field) => (
+//                           <TableCell key={field.field}>
+//                             {field.field === 'total_cost' ? (
+//                               // Read-only calculated field
+//                               <div className="font-medium py-2 px-2 bg-gray-50 rounded">
+//                                 ₹{(parseFloat(item.total_cost) || 0).toFixed(2)}
+//                               </div>
+//                             ) : (
+//                               <div data-error={!!errors[`item_${item.id}_${field.field}`]}>
+//                                 <CustomInputField
+//                                   field={field.field}
+//                                   label=""
+//                                   // require={field.require}
+//                                   type={field.type}
+//                                   options={field.options}
+//                                   value={item[field.field] || ''}
+//                                   onChange={(value) => handleItemChange(item.id, field.field, value)}
+//                                   error={errors[`item_${item.id}_${field.field}`]}
+//                                   placeholder={
+//                                     field.type === 'number'
+//                                       ? '0'
+//                                       : `Enter ${field.label.toLowerCase()}`
+//                                   }
+//                                   className="min-w-full"
+//                                 />
+//                               </div>
+//                             )}
+//                           </TableCell>
+//                         ))}
 //                         <TableCell>
 //                           <Button
 //                             type="button"
@@ -407,8 +385,9 @@
 //                             size="sm"
 //                             onClick={() => removeItem(item.id)}
 //                             disabled={items.length === 1}
+//                             title={items.length === 1 ? 'At least one item is required' : 'Remove item'}
 //                           >
-//                             <Trash2 className="h-4 w-4 text-red-500" />
+//                             <Trash2 className={`h-4 w-4 ${items.length === 1 ? 'text-gray-300' : 'text-red-500'}`} />
 //                           </Button>
 //                         </TableCell>
 //                       </TableRow>
@@ -416,28 +395,57 @@
 //                   </TableBody>
 //                 </Table>
 //               </div>
+
+//               {items.length === 0 && (
+//                 <div className="text-center py-8 text-gray-500">
+//                   No items added. Click "Add Item" to begin.
+//                 </div>
+//               )}
 //             </div>
 
 //             {/* Total Amount */}
 //             <div className="flex justify-end">
 //               <Card className="w-full md:w-96">
 //                 <CardContent className="pt-6">
-//                   <div className="flex justify-between items-center text-lg font-semibold">
-//                     <span>Total Estimated Amount:</span>
-//                     <span>₹{totalAmount.toFixed(2)}</span>
+//                   <div className="space-y-2">
+//                     <div className="flex justify-between items-center">
+//                       <span className="text-sm text-gray-600">Total Items:</span>
+//                       <span className="font-medium">{items.length}</span>
+//                     </div>
+//                     <div className="flex justify-between items-center text-lg font-semibold border-t pt-2">
+//                       <span>Total Estimated Amount:</span>
+//                       <span className="text-green-600">₹{totalAmount.toFixed(2)}</span>
+//                     </div>
 //                   </div>
 //                 </CardContent>
 //               </Card>
 //             </div>
 
+//             {/* Display Errors Summary */}
+//             {Object.keys(errors).length > 0 && (
+//               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+//                 <h4 className="text-red-800 font-semibold mb-2">Please fix the following errors:</h4>
+//                 <ul className="list-disc list-inside text-red-600 text-sm space-y-1">
+//                   {Object.values(errors).map((error, idx) => (
+//                     <li key={idx}>{error}</li>
+//                   ))}
+//                 </ul>
+//               </div>
+//             )}
+
 //             {/* Action Buttons */}
-//             <div className="flex justify-end gap-4 pt-4">
-//               <Button type="button" variant="outline">
-//                 Save as Draft
+//             <div className="flex justify-between items-center gap-4 pt-4 border-t">
+//               <Button type="button" variant="outline" onClick={handleReset}>
+//                 Reset Form
 //               </Button>
-//               <Button type="submit">
-//                 Submit Requisition
-//               </Button>
+//               <div className="flex gap-4">
+//                 <Button type="button" variant="outline" onClick={handleSaveAsDraft}>
+//                   Save as Draft
+//                 </Button>
+//                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+//                   Submit Requisition
+//                 </Button>
+//               </div>
 //             </div>
 //           </form>
 //         </CardContent>
@@ -447,50 +455,115 @@
 // };
 
 // export default PurchaseRequisitionPage;
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 import { CustomInputField } from '@/CustomComponent/InputComponents/CustomInputField';
-import { usePRBasicInfoFields,usePRItemDetailsFields } from '@/FieldDatas/PRData';
-
+import { usePRBasicInfoFields, usePRItemDetailsFields } from '@/FieldDatas/PRData';
+import usePost from '@/hooks/usePostHook';
+import { createPrRecord } from '@/Services/Api';
 interface FormErrors {
   [key: string]: string;
 }
 
+interface FieldConfig {
+  field: string;
+  label: string;
+  type: string;
+  require?: boolean;
+  input?: boolean;
+  options?: any;
+  defaultValue?: any;
+}
+
 const PurchaseRequisitionPage: React.FC = () => {
-  // Get field configurations
   const basicInfoFields = usePRBasicInfoFields();
   const itemDetailsFields = usePRItemDetailsFields();
 
-  // State for basic info form data
-  const [basicFormData, setBasicFormData] = useState<Record<string, any>>({
-    reg_date: new Date().toISOString().split('T')[0],
-    is_active: true,
-  });
+  // Dynamically create initial state from basicInfoFields
+  const initialBasicFormData = useMemo(() => {
+    const initialData: Record<string, any> = {};
+    
+    basicInfoFields.forEach((field: FieldConfig) => {
+      if (field.input) {
+        if (field.defaultValue !== undefined) {
+          initialData[field.field] = field.defaultValue;
+        } else if (field.field === 'req_date') {
+          initialData[field.field] = new Date().toISOString().split('T')[0];
+        } else if (field.type === 'number') {
+          initialData[field.field] = 0;
+        } else {
+          initialData[field.field] = '';
+        }
+      }
+    });
+    
+    return initialData;
+  }, [basicInfoFields]);
 
-  // State for items
-  const [items, setItems] = useState<Record<string, any>[]>([
-    {
-      id: '1',
-      qty: 1,
-      est_cost: 0,
-      total_cost: 0,
-      is_active: true,
-    },
-  ]);
+  // Create empty item structure
+  const createEmptyItem = useMemo(() => {
+    return () => {
+      const newItem: Record<string, any> = {};
+      
+      itemDetailsFields.forEach((field: FieldConfig) => {
+        if (field.input && field.field !== 'pr_item_sno' && field.field !== 'pr_basic_sno') {
+          if (field.defaultValue !== undefined) {
+            newItem[field.field] = field.defaultValue;
+          } else if (field.field === 'qty') {
+            newItem[field.field] = 1;
+          } else if (field.field === 'est_cost' || field.field === 'total_cost') {
+            newItem[field.field] = 0;
+          } else if (field.field === 'is_active') {
+            newItem[field.field] = true;
+          } else if (field.type === 'number') {
+            newItem[field.field] = 0;
+          } else if (field.type === 'checkbox' || field.type === 'boolean') {
+            newItem[field.field] = false;
+          } else {
+            newItem[field.field] = '';
+          }
+        }
+      });
+      
+      return newItem;
+    };
+  }, [itemDetailsFields]);
+
+  // State for basic info form data
+  const [basicFormData, setBasicFormData] = useState<Record<string, any>>(initialBasicFormData);
+
+  // State for current item being added/edited
+  const [currentItem, setCurrentItem] = useState<Record<string, any>>(createEmptyItem());
+
+  // State for saved items list
+  const [savedItems, setSavedItems] = useState<Record<string, any>[]>([]);
+
+  // State for editing
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<FormErrors>({});
+  const [itemErrors, setItemErrors] = useState<FormErrors>({});
+  const { postData } = usePost();
+  console.log(basicFormData);
 
-  // Filter fields for input vs view
+  // Update state when field configurations change
+  useEffect(() => {
+    setBasicFormData(initialBasicFormData);
+  }, [initialBasicFormData]);
+
+  // Filter fields for input
   const inputBasicFields = useMemo(
-    () => basicInfoFields.filter((field) => field.input ),
+    () => basicInfoFields.filter((field) => field.input),
     [basicInfoFields]
   );
 
   const inputItemFields = useMemo(
-    () => itemDetailsFields.filter((field) => field.input && field.field !== 'pr_item_sno' && field.field !== 'pr_basic_sno'),
+    () => itemDetailsFields.filter(
+      (field) => field.input && field.field !== 'pr_item_sno' && field.field !== 'pr_basic_sno'
+    ),
     [itemDetailsFields]
   );
 
@@ -498,7 +571,6 @@ const PurchaseRequisitionPage: React.FC = () => {
   const handleBasicFieldChange = (fieldName: string, value: any) => {
     setBasicFormData((prev) => ({ ...prev, [fieldName]: value }));
     
-    // Clear error for this field
     if (errors[fieldName]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -507,100 +579,144 @@ const PurchaseRequisitionPage: React.FC = () => {
       });
     }
 
-    // Handle dependent field updates (e.g., when selecting a master, update the name field)
-    const field = basicInfoFields.find(f => f.field === fieldName);
+    // Handle dependent field updates
+    const field = basicInfoFields.find((f) => f.field === fieldName);
     if (field && field.options && typeof field.options !== 'string') {
-      const selectedOption = field.options.find(opt => opt.value === value);
+      const selectedOption = field.options.find((opt: any) => opt.value === value);
       if (selectedOption) {
         const nameField = fieldName.replace('_sno', '_name');
-        setBasicFormData(prev => ({ ...prev, [nameField]: selectedOption.label }));
+        setBasicFormData((prev) => ({ ...prev, [nameField]: selectedOption.label }));
       }
     }
   };
 
-  // Handle item field changes
-  const handleItemChange = (itemId: string, fieldName: string, value: any) => {
-    setItems((prevItems) =>
-      prevItems.map((item) => {
-        if (item.id === itemId) {
-          const updatedItem = { ...item, [fieldName]: value };
+  // Handle current item field changes
+  const handleItemFieldChange = (fieldName: string, value: any) => {
+    setCurrentItem((prev) => {
+      const updatedItem = { ...prev, [fieldName]: value };
 
-          // Auto-calculate total_cost when qty or est_cost changes
-          if (fieldName === 'qty' || fieldName === 'est_cost') {
-            const qty = fieldName === 'qty' ? parseFloat(value) || 0 : parseFloat(updatedItem.qty) || 0;
-            const estCost = fieldName === 'est_cost' ? parseFloat(value) || 0 : parseFloat(updatedItem.est_cost) || 0;
-            updatedItem.total_cost = qty * estCost;
-          }
+      // Auto-calculate total_cost when qty or est_cost changes
+      if (fieldName === 'qty' || fieldName === 'est_cost') {
+        const qty = fieldName === 'qty' ? parseFloat(value) || 0 : parseFloat(updatedItem.qty) || 0;
+        const estCost = fieldName === 'est_cost' ? parseFloat(value) || 0 : parseFloat(updatedItem.est_cost) || 0;
+        updatedItem.total_cost = qty * estCost;
+      }
 
-          // Handle dependent field updates for dropdowns
-          const field = itemDetailsFields.find(f => f.field === fieldName);
-          if (field && field.options && typeof field.options !== 'string') {
-            const selectedOption = field.options.find(opt => opt.value === value);
-            if (selectedOption) {
-              const nameField = fieldName.replace('_sno', '_name');
-              updatedItem[nameField] = selectedOption.label;
-            }
-          }
-
-          return updatedItem;
+      // Handle dependent field updates for dropdowns
+      const field = itemDetailsFields.find((f) => f.field === fieldName);
+      if (field && field.options && typeof field.options !== 'string') {
+        const selectedOption = field.options.find((opt: any) => opt.value === value);
+        if (selectedOption) {
+          const nameField = fieldName.replace('_sno', '_name');
+          updatedItem[nameField] = selectedOption.label;
         }
-        return item;
-      })
-    );
+      }
 
-    // Clear item-specific error
-    const errorKey = `item_${itemId}_${fieldName}`;
-    if (errors[errorKey]) {
-      setErrors((prev) => {
+      return updatedItem;
+    });
+
+    // Clear error for this field
+    if (itemErrors[fieldName]) {
+      setItemErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors[errorKey];
+        delete newErrors[fieldName];
         return newErrors;
       });
     }
   };
 
-  // Add new item row
-  const addItem = () => {
-    const newItem = {
-      id: Date.now().toString(),
-      qty: 1,
-      est_cost: 0,
-      total_cost: 0,
-      is_active: true,
-    };
-    setItems([...items, newItem]);
+  // Validate current item
+  const validateItem = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    inputItemFields.forEach((field) => {
+      if (field.require && !currentItem[field.field]) {
+        newErrors[field.field] = `${field.label} is required`;
+      }
+      
+      // Additional validation for quantity
+      if (field.field === 'qty' && (currentItem.qty <= 0 || !currentItem.qty)) {
+        newErrors['qty'] = 'Quantity must be greater than 0';
+      }
+
+      // Additional validation for cost fields
+      if ((field.field === 'est_cost' || field.field === 'total_cost') && currentItem[field.field] < 0) {
+        newErrors[field.field] = `${field.label} cannot be negative`;
+      }
+    });
+
+    setItemErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  // Remove item row
-  const removeItem = (itemId: string) => {
-    if (items.length > 1) {
-      setItems(items.filter((item) => item.id !== itemId));
+  // Add item to saved items list
+  const handleAddItem = () => {
+    if (validateItem()) {
+      const newItem = {
+        ...currentItem,
+        id: Date.now().toString(), // Generate unique ID
+      };
+      
+      setSavedItems((prev) => [...prev, newItem]);
+      setCurrentItem(createEmptyItem()); // Reset form
+      setItemErrors({});
     }
   };
 
-  // Validate form
-  const validateForm = (): boolean => {
+  // Edit item
+  const handleEditItem = (itemId: string) => {
+    const itemToEdit = savedItems.find((item) => item.id === itemId);
+    if (itemToEdit) {
+      const { id, ...itemData } = itemToEdit;
+      setCurrentItem(itemData);
+      setEditingItemId(itemId);
+      // Scroll to form
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Update edited item
+  const handleUpdateItem = () => {
+    if (validateItem() && editingItemId) {
+      setSavedItems((prev) =>
+        prev.map((item) =>
+          item.id === editingItemId ? { ...currentItem, id: editingItemId } : item
+        )
+      );
+      setCurrentItem(createEmptyItem());
+      setEditingItemId(null);
+      setItemErrors({});
+    }
+  };
+
+  // Cancel edit
+  const handleCancelEdit = () => {
+    setCurrentItem(createEmptyItem());
+    setEditingItemId(null);
+    setItemErrors({});
+  };
+
+  // Delete item
+  const handleDeleteItem = (itemId: string) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      setSavedItems((prev) => prev.filter((item) => item.id !== itemId));
+      
+      // If currently editing this item, reset form
+      if (editingItemId === itemId) {
+        setCurrentItem(createEmptyItem());
+        setEditingItemId(null);
+      }
+    }
+  };
+
+  // Validate basic form
+  const validateBasicForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Validate basic info fields
     inputBasicFields.forEach((field) => {
       if (field.require && !basicFormData[field.field]) {
         newErrors[field.field] = `${field.label} is required`;
       }
-    });
-
-    // Validate items
-    items.forEach((item) => {
-      inputItemFields.forEach((field) => {
-        if (field.require && !item[field.field]) {
-          newErrors[`item_${item.id}_${field.field}`] = `${field.label} is required`;
-        }
-        
-        // Additional validation for quantity
-        if (field.field === 'qty' && (item.qty <= 0 || !item.qty)) {
-          newErrors[`item_${item.id}_qty`] = 'Quantity must be greater than 0';
-        }
-      });
     });
 
     setErrors(newErrors);
@@ -611,36 +727,76 @@ const PurchaseRequisitionPage: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (validateForm()) {
+    const isBasicFormValid = validateBasicForm();
+    const hasItems = savedItems.length > 0;
+
+    if (!hasItems) {
+      alert('Please add at least one item to the requisition');
+      return;
+    }
+
+    if (isBasicFormValid) {
       const requisitionData = {
         basicInfo: basicFormData,
-        items: items,
-        totalAmount: items.reduce((sum, item) => sum + (item.total_cost || 0), 0),
+        items: savedItems.map(({ id, ...item }) => item),
+        totalAmount: totalAmount,
+        submittedAt: new Date().toISOString(),
       };
 
-      console.log('Purchase Requisition Data:', requisitionData);
+      const response=postData(createPrRecord, requisitionData);
+
+      console.log('Purchase Requisition Data:', response);
       // TODO: Call your API here
-      alert('Purchase Requisition submitted successfully!');
     } else {
-      console.log('Validation errors:', errors);
+      const firstErrorElement = document.querySelector('[data-error="true"]');
+      if (firstErrorElement) {
+        firstErrorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
+  };
+
+  // Handle save as draft
+  const handleSaveAsDraft = () => {
+    const draftData = {
+      basicInfo: basicFormData,
+      items: savedItems,
+      totalAmount: totalAmount,
+      savedAt: new Date().toISOString(),
+      isDraft: true,
+    };
+
+    console.log('Saving draft:', draftData);
+    // TODO: Call your API to save draft
+    alert('Draft saved successfully!');
   };
 
   // Calculate total amount
   const totalAmount = useMemo(
-    () => items.reduce((sum, item) => sum + (item.total_cost || 0), 0),
-    [items]
+    () => savedItems.reduce((sum, item) => sum + (parseFloat(item.total_cost) || 0), 0),
+    [savedItems]
   );
 
-  // Get table columns for items (only fields that should be shown in table)
-  const tableColumns = useMemo(() => {
-    return inputItemFields.filter(field => 
-      !['pr_item_sno', 'pr_basic_sno', 'is_active'].includes(field.field)
+  // Get display columns for table (exclude certain fields)
+  const displayColumns = useMemo(() => {
+    return inputItemFields.filter((field) =>
+      !['is_active'].includes(field.field)
     );
   }, [inputItemFields]);
 
+  // Reset form
+  const handleReset = () => {
+    if (window.confirm('Are you sure you want to reset the entire form? All data will be lost.')) {
+      setBasicFormData(initialBasicFormData);
+      setCurrentItem(createEmptyItem());
+      setSavedItems([]);
+      setEditingItemId(null);
+      setErrors({});
+      setItemErrors({});
+    }
+  };
+
   return (
-    <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8 px-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">Purchase Requisition - Non Trade</CardTitle>
@@ -655,107 +811,222 @@ const PurchaseRequisitionPage: React.FC = () => {
               <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {inputBasicFields.map((field) => (
-                  <CustomInputField
-                    key={field.field}
-                    field={field.field}
-                    label={field.label}
-                    require={field.require}
-                    type={field.type}
-                    options={field.options}
-                    value={basicFormData[field.field] || ''}
-                    onChange={(value) => handleBasicFieldChange(field.field, value)}
-                    error={errors[field.field]}
-                    placeholder={`Enter ${field.label.toLowerCase()}`}
-                  />
+                  <div key={field.field} data-error={!!errors[field.field]}>
+                    <CustomInputField
+                      field={field.field}
+                      label={field.label}
+                      require={field.require}
+                      type={field.type}
+                      options={field.options}
+                      value={basicFormData[field.field] || ''}
+                      onChange={(value) => handleBasicFieldChange(field.field, value)}
+                      error={errors[field.field]}
+                      placeholder={`Enter ${field.label.toLowerCase()}`}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
 
-            {/* Items Table Section */}
+            {/* Item Entry Section */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Requisition Items</h3>
-                <Button type="button" onClick={addItem} size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
+                <h3 className="text-lg font-semibold">
+                  {editingItemId ? 'Edit Item' : 'Add Item'}
+                </h3>
+                {editingItemId && (
+                  <Button type="button" onClick={handleCancelEdit} size="sm" variant="outline">
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel Edit
+                  </Button>
+                )}
               </div>
 
-              <div className="border rounded-lg overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {tableColumns.map((field) => (
-                        <TableHead key={field.field} className="min-w-[150px]">
-                          {field.label}
-                          {field.require && <span className="text-red-500 ml-1">*</span>}
-                        </TableHead>
-                      ))}
-                      <TableHead className="w-[80px]">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((item) => (
-                      <TableRow key={item.id}>
-                        {tableColumns.map((field) => (
-                          <TableCell key={field.field}>
-                            {field.field === 'total_cost' ? (
-                              // Read-only calculated field
-                              <div className="font-medium py-2">
-                                ₹{(item.total_cost || 0).toFixed(2)}
-                              </div>
-                            ) : (
-                              <CustomInputField
-                                field={field.field}
-                                label=""
-                                require={field.require}
-                                type={field.type}
-                                options={field.options}
-                                value={item[field.field] || ''}
-                                onChange={(value) => handleItemChange(item.id, field.field, value)}
-                                error={errors[`item_${item.id}_${field.field}`]}
-                                placeholder={field.type === 'number' ? '0' : `Enter ${field.label.toLowerCase()}`}
-                                className="min-w-full"
-                              />
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeItem(item.id)}
-                            disabled={items.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-
-            {/* Total Amount */}
-            <div className="flex justify-end">
-              <Card className="w-full md:w-96">
+              <Card className="bg-gray-50">
                 <CardContent className="pt-6">
-                  <div className="flex justify-between items-center text-lg font-semibold">
-                    <span>Total Estimated Amount:</span>
-                    <span>₹{totalAmount.toFixed(2)}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {inputItemFields.map((field) => (
+                      <div key={field.field} data-error={!!itemErrors[field.field]}>
+                        {field.field === 'total_cost' ? (
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              {field.label}
+                              {field.require && <span className="text-red-500 ml-1">*</span>}
+                            </label>
+                            <div className="font-semibold py-2 px-3 bg-white rounded border text-green-600">
+                              ₹{(parseFloat(currentItem.total_cost) || 0).toFixed(2)}
+                            </div>
+                          </div>
+                        ) : (
+                          <CustomInputField
+                            field={field.field}
+                            label={field.label}
+                            require={field.require}
+                            type={field.type}
+                            options={field.options}
+                            value={currentItem[field.field] || ''}
+                            onChange={(value) => handleItemFieldChange(field.field, value)}
+                            error={itemErrors[field.field]}
+                            placeholder={
+                              field.type === 'number'
+                                ? '0'
+                                : `Enter ${field.label.toLowerCase()}`
+                            }
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Display Item Errors */}
+                  {Object.keys(itemErrors).length > 0 && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                      <p className="text-red-800 font-semibold text-sm mb-1">Please fix the following:</p>
+                      <ul className="list-disc list-inside text-red-600 text-sm space-y-1">
+                        {Object.values(itemErrors).map((error, idx) => (
+                          <li key={idx}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end mt-4">
+                    {editingItemId ? (
+                      <Button type="button" onClick={handleUpdateItem} className="bg-green-600 hover:bg-green-700">
+                        <Check className="h-4 w-4 mr-2" />
+                        Update Item
+                      </Button>
+                    ) : (
+                      <Button type="button" onClick={handleAddItem} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Item
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Saved Items Table */}
+            {savedItems.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Items List</h3>
+                <div className="border rounded-lg overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]">S.No</TableHead>
+                        {displayColumns.map((field) => (
+                          <TableHead key={field.field} className="min-w-[120px]">
+                            {field.label}
+                          </TableHead>
+                        ))}
+                        <TableHead className="w-[100px] text-center">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {savedItems.map((item, index) => (
+                        <TableRow key={item.id} className={editingItemId === item.id ? 'bg-blue-50' : ''}>
+                          <TableCell className="text-center font-medium">{index + 1}</TableCell>
+                          {displayColumns.map((field) => (
+                            <TableCell key={field.field}>
+                              {field.field === 'total_cost' || field.field === 'est_cost' ? (
+                                <span className="font-medium text-green-600">
+                                  ₹{(parseFloat(item[field.field]) || 0).toFixed(2)}
+                                </span>
+                              ) : field.type === 'checkbox' || field.type === 'boolean' ? (
+                                <span>{item[field.field] ? 'Yes' : 'No'}</span>
+                              ) : (
+                                <span>{item[field.field]}</span>
+                              )}
+                            </TableCell>
+                          ))}
+                          <TableCell>
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditItem(item.id)}
+                                title="Edit item"
+                                disabled={editingItemId !== null}
+                              >
+                                <Edit2 className="h-4 w-4 text-blue-500" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteItem(item.id)}
+                                title="Delete item"
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+
+            {savedItems.length === 0 && (
+              <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50">
+                No items added yet. Fill in the item details above and click "Add Item".
+              </div>
+            )}
+
+            {/* Total Amount */}
+            {savedItems.length > 0 && (
+              <div className="flex justify-end">
+                <Card className="w-full md:w-96">
+                  <CardContent className="pt-6">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Total Items:</span>
+                        <span className="font-medium">{savedItems.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-lg font-semibold border-t pt-2">
+                        <span>Total Estimated Amount:</span>
+                        <span className="text-green-600">₹{totalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Display Basic Form Errors Summary */}
+            {Object.keys(errors).length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 className="text-red-800 font-semibold mb-2">Please fix the following errors:</h4>
+                <ul className="list-disc list-inside text-red-600 text-sm space-y-1">
+                  {Object.values(errors).map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Action Buttons */}
-            <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="outline">
-                Save as Draft
+            <div className="flex justify-between items-center gap-4 pt-4 border-t">
+              <Button type="button" variant="outline" onClick={handleReset}>
+                Reset Form
               </Button>
-              <Button type="submit">Submit Requisition</Button>
+              <div className="flex gap-4">
+                <Button type="button" variant="outline" onClick={handleSaveAsDraft}>
+                  Save as Draft
+                </Button>
+                <Button 
+                  type="submit" 
+                  className="bg-blue-600 hover:bg-blue-700"
+                  disabled={savedItems.length === 0}
+                >
+                  Submit Requisition
+                </Button>
+              </div>
             </div>
           </form>
         </CardContent>

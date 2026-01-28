@@ -169,7 +169,7 @@ export function CustomInputField({
         return (
           <Select
             name={field}
-            value={typeof value === "object" ? value?.value ?? "" : value ?? ""}
+            value={value ? String(value) : ""}
             onValueChange={(v: string) => handleChange(v)}
             disabled={disabled}
             required={require}
@@ -179,7 +179,7 @@ export function CustomInputField({
             </SelectTrigger>
             <SelectContent>
               {optionsArray.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem key={option.value} value={String(option.value)}>
                   {option.label}
                 </SelectItem>
               ))}
