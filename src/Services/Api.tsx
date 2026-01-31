@@ -8,5 +8,4 @@ export const apiFetchCommonMaster=baseUrl+"/api/common_master/";
 export const createWorkFlowApproval=baseUrl+"/api/workflow_approval/createWorkFlowApproval";
 export const getAllRequiredMasterForOptions=baseUrl+"/api/common_master/getRequiredMasterForOptions";
 export const createPrRecord=baseUrl+"/api/pr/createPrRecords";
-
-
+export const getPrRecords=baseUrl+"/api/pr/getPrRecords";
