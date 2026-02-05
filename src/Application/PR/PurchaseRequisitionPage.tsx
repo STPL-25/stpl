@@ -9,19 +9,8 @@ import { usePRBasicInfoFields, usePRItemDetailsFields } from '@/FieldDatas/PRDat
 import usePost from '@/hooks/usePostHook';
 import { createPrRecord } from '@/Services/Api';
 import { toast } from 'sonner';
-interface FormErrors {
-  [key: string]: string;
-}
+import type {FormErrors,FieldConfig} from "./types/PurchaseRequisitionPageTypes"
 
-interface FieldConfig {
-  field: string;
-  label: string;
-  type: string;
-  require?: boolean;
-  input?: boolean;
-  options?: any;
-  defaultValue?: any;
-}
 
 const PurchaseRequisitionPage: React.FC = () => {
   const basicInfoFields = usePRBasicInfoFields();
@@ -107,7 +96,13 @@ const PurchaseRequisitionPage: React.FC = () => {
 
   const inputItemFields = useMemo(
     () => itemDetailsFields.filter(
-      (field) => field.input && field.field !== 'pr_item_sno' && field.field !== 'pr_basic_sno'
+      (field) => field.input
+    ),
+    [itemDetailsFields]
+  );
+    const viewItemFields = useMemo(
+    () => itemDetailsFields.filter(
+      (field) => field.view
     ),
     [itemDetailsFields]
   );
@@ -137,6 +132,8 @@ const PurchaseRequisitionPage: React.FC = () => {
 
   // Handle current item field changes
   const handleItemFieldChange = (fieldName: string, value: any) => {
+        console.log(fieldName,value)
+
     setCurrentItem((prev) => {
       const updatedItem = { ...prev, [fieldName]: value };
 
@@ -323,10 +320,10 @@ const PurchaseRequisitionPage: React.FC = () => {
 
   // Get display columns for table (exclude certain fields)
   const displayColumns = useMemo(() => {
-    return inputItemFields.filter((field) =>
-      !['is_active'].includes(field.field)
+    return viewItemFields.filter((field) =>
+     field.view
     );
-  }, [inputItemFields]);
+  }, [viewItemFields]);
 
   // Reset form
   const handleReset = () => {

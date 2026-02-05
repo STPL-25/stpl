@@ -1,7 +1,6 @@
 import { useMemo } from "react";
-import type { FieldType } from "./fieldType/fieldType";
 import { useMasterOptions } from "../hooks/ReUsableHook/useMasterOptions";
-
+import { FieldType } from "./fieldType/fieldType";
 
 
 export const usePRBasicInfoFields = (formData?: any): FieldType[] => {
@@ -33,11 +32,11 @@ export const usePRItemDetailsFields = (formData?: any): FieldType[] => {
 
   return useMemo<FieldType[]>(
     () => [
-      { field: "pr_item_sno", label: "PR Item ID", require: false, view: true, type: "text", input: false },
-      { field: "pr_basic_sno", label: "PR Basic", require: false, view: false, type: "select", options: options?.PRBasicInfo, input: true },
-      { field: "pr_basic_name", label: "PR Basic", require: false, view: true, type: "select", options: options?.PRBasicInfo, input: false },
-      { field: "prod_sno", label: "Product", require: false, view: true, type: "select", options: options?.ProductMaster, input: true },
-      // { field: "prod_name", label: "Product", require: true, view: true, type: "select", options: options?.ProductMaster, input: false },
+      { field: "pr_item_sno", label: "PR Item ID", require: false, view: false, type: "text", input: false  },
+      // { field: "pr_basic_sno", label: "PR Basic", require: false, view: false, type: "select", options: options?.PRBasicInfo, input: false },
+      // { field: "pr_basic_name", label: "PR Basic", require: false, view: false, type: "select", options: options?.PRBasicInfo, input: false },
+      { field: "prod_sno", label: "Product", require: false, view: false, type: "select", options: options?.ProductMaster, input: true },
+      { field: "prod_name", label: "Product", require: true, view: true, type: "text", input: false },
       { field: "qty", label: "Quantity", require: false, view: true, type: "number", input: true },
       { field: "unit", label: "Unit", require: false, view: false, type: "select", options: options?.UomMaster, input: true },
       { field: "unit_name", label: "Unit", require: false, view: true, type: "select", options: options?.UomMaster, input: false },
